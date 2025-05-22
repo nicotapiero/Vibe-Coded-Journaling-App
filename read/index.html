@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Journal Entries</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border: 1px solid #ccc;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+      
+      .unfinished {
+        background-color: #EA526F;
+      }
+      
+      .finished {
+        background-color: #629677;
+      }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Journal Entries (last 14 days)</h1>
+    <table id="entriesTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Title</th>
+          <th>Entry</th>
+          <th>Unfinished</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
+      const RANGE = "Sheet1!A:D";
+      const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
+      const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+      let gapiInited = false;
+      let tokenClient;
+
+      function gapiLoaded() {
+        gapi.load("client", initializeGapiClient);
+      }
+
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            gapi.client.setToken(tokenResponse);
+            loadEntries();
+          },
+        });
+        maybeEnableButtons();
+      }
+
+      function maybeEnableButtons() {
+        if (gapiInited && tokenClient) {
+          tokenClient.requestAccessToken();
+        }
+      }
+
+      async function loadEntries() {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: RANGE,
+        });
+
+        const data = res.result.values || [];
+        const tbody = document.querySelector("#entriesTable tbody");
+
+        // Convert spreadsheet rows into a map for quick lookup
+        const entriesMap = new Map();
+        data.forEach(row => {
+          entriesMap.set(row[0], row); // row[0] = date string
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
+        const daysBack = 14;
+
+        // add i = 1 to make it start at yesterday instead of today
+        for (let i = 0; i <= daysBack; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split("T")[0];  // Get the date in YYYY-MM-DD format
+
+          // Get the day of the week (e.g., "Mon", "Tue", etc.)
+          const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const dayOfWeek = daysOfWeek[date.getDay()];
+
+          // Format the date string as "Day, YYYY-MM-DD"
+          const formattedDate = `${dayOfWeek}, ${dateStr}`;
+
+          const row = entriesMap.get(dateStr);
+
+          const isMarkedUnfinished = row && row[3] && row[3].toUpperCase() === "TRUE";
+          const entryText = (row?.[2] || "(No entry written)").replace(/\n/g, "<br>");
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${formattedDate}</td>
+            <td>${row?.[1] || "(No title)"}</td>
+            <td>${entryText}</td>
+            <td class="${isMarkedUnfinished ? "unfinished" : "finished"}">${isMarkedUnfinished ? "Yes" : "No"}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      window.onload = () => {
+        gapiLoaded();
+        gisLoaded();
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unfinished Entries</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid #ccc;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Unfinished Journal Entries (last 30 days)</h1>
+    <table id="unfinishedTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Title</th>
+          <th>Entry</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
+      const RANGE = "Sheet1!A:D";
+      const CLIENT_ID =
+        "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
+      const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+      let gapiInited = false;
+      let tokenClient;
+
+      function gapiLoaded() {
+        gapi.load("client", initializeGapiClient);
+      }
+
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          discoveryDocs: [
+            "https://sheets.googleapis.com/$discovery/rest?version=v4",
+          ],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            gapi.client.setToken(tokenResponse);
+            loadUnfinishedEntries();
+          },
+        });
+        maybeEnableButtons();
+      }
+
+      function maybeEnableButtons() {
+        if (gapiInited && tokenClient) {
+          tokenClient.requestAccessToken();
+        }
+      }
+
+      async function loadUnfinishedEntries() {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: RANGE,
+        });
+
+        const data = res.result.values || [];
+        const tbody = document.querySelector("#unfinishedTable tbody");
+
+        // Convert spreadsheet rows into a map for quick lookup
+        const entriesMap = new Map();
+        data.forEach((row) => {
+          entriesMap.set(row[0], row); // row[0] = date string
+        });
+
+        const today = new Date();
+        const daysBack = 30;
+
+        // make i = 1 to not include today
+        for (let i = 0; i <= daysBack; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split("T")[0];
+
+          const row = entriesMap.get(dateStr);
+
+          const isBlank = !row || !row[2] || row[2].trim() === "";
+          const isMarkedUnfinished =
+            row && row[3] && row[3].toUpperCase() === "TRUE";
+
+          const entryText = (row?.[2] || "(No entry written)").replace(
+            /\n/g,
+            "<br>"
+          );
+
+          if (isBlank || isMarkedUnfinished) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+        <td>${dateStr}</td>
+        <td>${row?.[1] || "(No title)"}</td>
+        <td>${entryText}</td>
+      `;
+            tbody.appendChild(tr);
+          }
+        }
+      }
+
+      window.onload = () => {
+        gapiLoaded();
+        gisLoaded();
+      };
+    </script>
+  </body>
+</html>

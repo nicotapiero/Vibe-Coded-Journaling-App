@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Journal</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+
+      input[type="date"],
+      input[type="text"],
+      textarea,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 16px;
+        border: 1px solid #000;
+      }
+
+      textarea {
+        height: 200px;
+        resize: none;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      label[for="unfinishedCheckbox"] {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 16px;
+      }
+      
+      footer { 
+        position: absolute; 
+        bottom: 0; 
+        left: 0; 
+        z-index: 10;
+      }
+      
+      #weekdayDisplay {
+        margin-top: 5px;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 24px;
+        }
+
+        input[type="date"],
+        input[type="text"],
+        textarea,
+        button {
+          font-size: 16px;
+          padding: 14px;
+        }
+
+        textarea {
+          height: 300px;
+        }
+
+        body {
+          padding: 10px;
+          gap: 15px;
+        }
+      }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Daily Journal</h1>
+
+    <label for="datePicker">Pick a date:</label>
+    <input type="date" id="datePicker" />
+    <div id="weekdayDisplay"></div><br />
+
+    <label for="title">Title:</label>
+    <input
+      type="text"
+      id="title"
+      placeholder="Enter the title of your journal entry"
+    /><br />
+
+    <textarea id="journalEntry" placeholder="Write your entry..."></textarea
+    ><br />
+
+    <label for="unfinishedCheckbox">
+      <input type="checkbox" id="unfinishedCheckbox" />
+      Mark as Unfinished </label
+    ><br />
+
+    <button id="saveButton">Save</button>
+
+    <script>
+      const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA"; // 🔁 Replace with your actual Sheet ID
+      const RANGE = "Sheet1!A:D"; // Update range to include the new Title column
+      const CLIENT_ID =
+        "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com"; // 🔁 Replace with your OAuth 2.0 Client ID
+      const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+      let gapiInited = false;
+      let tokenClient;
+      let accessToken;
+      let journalData = [];
+
+      let originalTitle = "";
+      let originalEntry = "";
+      let originalUnfinished = false;
+
+      document
+        .getElementById("datePicker")
+        .addEventListener("change", function() {
+          updateWeekday();
+          loadEntry();
+        });
+      document
+        .getElementById("saveButton")
+        .addEventListener("click", saveEntry);
+
+      function updateWeekday() {
+        const selectedDate = document.getElementById("datePicker").value;
+        if (!selectedDate) return;
+        
+        const date = new Date(selectedDate);
+        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const weekday = weekdays[date.getDay()];
+        
+        document.getElementById("weekdayDisplay").textContent = weekday;
+      }
+
+      function gapiLoaded() {
+        gapi.load("client", initializeGapiClient);
+      }
+
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          discoveryDocs: [
+            "https://sheets.googleapis.com/$discovery/rest?version=v4",
+          ],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            accessToken = tokenResponse.access_token;
+            gapi.client.setToken(tokenResponse);
+            loadDates();
+          },
+        });
+        maybeEnableButtons();
+      }
+
+      function maybeEnableButtons() {
+        if (gapiInited && tokenClient) {
+          tokenClient.requestAccessToken();
+        }
+      }
+
+      async function loadDates() {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: RANGE,
+        });
+        journalData = res.result.values || [];
+        autoSelectToday();
+      }
+
+      function autoSelectToday() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
+        const yesterday = new Date();
+        yesterday.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
+        yesterday.setDate(today.getDate() - 1);
+
+        const todayStr = today.toISOString().split("T")[0];
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+        const todayEntry = journalData.find((row) => row[0] === todayStr);
+        const yesterdayEntry = journalData.find(
+          (row) => row[0] === yesterdayStr
+        );
+
+        const unfinishedFlag =
+          yesterdayEntry &&
+          yesterdayEntry[3] &&
+          yesterdayEntry[3].toUpperCase() === "TRUE";
+        const isYesterdayBlank =
+          !yesterdayEntry ||
+          !yesterdayEntry[2] ||
+          yesterdayEntry[2].trim() === "";
+
+        if (unfinishedFlag || isYesterdayBlank) {
+          document.getElementById("datePicker").value = yesterdayStr;
+        } else {
+          document.getElementById("datePicker").value = todayStr;
+        }
+
+        updateWeekday(); // Update the weekday display
+        loadEntry();
+      }
+
+      function loadEntry() {
+        if (checkUnsavedChanges()) {
+          if (!window.confirm("You have unsaved changes. Are you sure you want to take this action?")) {
+            return;
+          }
+        }
+
+        const selectedDate = document.getElementById("datePicker").value;
+        if (!selectedDate) return;
+
+        const match = journalData.find((row) => row[0] === selectedDate);
+        originalTitle = match ? match[1] || "" : "";
+        originalEntry = match ? match[2] || "" : "";
+        originalUnfinished =
+          match && match[3] && match[3].toUpperCase() === "TRUE";
+
+        document.getElementById("title").value = originalTitle;
+        document.getElementById("journalEntry").value = originalEntry;
+        document.getElementById("unfinishedCheckbox").checked =
+          originalUnfinished;
+      }
+
+      async function saveEntry() {
+        const selectedDate = document.getElementById("datePicker").value;
+        const titleText = document.getElementById("title").value;
+        const newText = document.getElementById("journalEntry").value;
+        const unfinished =
+          document.getElementById("unfinishedCheckbox").checked; // Make sure we reference the correct checkbox
+
+        if (!selectedDate) return; // Ensure we have a valid date selected
+
+        let rowIndex = journalData.findIndex((row) => row[0] === selectedDate);
+
+        console.log(
+          "Saving entry for:",
+          selectedDate,
+          titleText,
+          newText,
+          unfinished
+        ); // Debug log
+        // throw new Error("Parameter is not a number!");
+
+        let ret = undefined;
+
+        try {
+          if (rowIndex === -1) {
+            // Adding a new entry to the sheet
+            // ret = await gapi.client.sheets.spreadsheets.values.append({
+            //   spreadsheetId: SHEET_ID,
+            //   range: "Sheet1!A:D",
+            //   valueInputOption: "RAW",
+            //   insertDataOption: "INSERT_ROWS",
+            //   resource: {
+            //     values: [
+            //       [
+            //         selectedDate,
+            //         titleText,
+            //         newText,
+            //         unfinished ? "TRUE" : "FALSE",
+            //       ],
+            //     ],
+            //   },
+            // });
+            // journalData.push([
+            //   selectedDate,
+            //   titleText,
+            //   newText,
+            //   unfinished ? "TRUE" : "FALSE",
+            // ]);
+            throw new Error("Error: entry column doesnt exist");
+          } else {
+            // Updating an existing entry in the sheet
+            const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+            ret = await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID,
+              range: range,
+              valueInputOption: "RAW",
+              resource: {
+                values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+              },
+            });
+            journalData[rowIndex][1] = titleText;
+            journalData[rowIndex][2] = newText;
+            journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+          }
+
+          // Update the original values to reflect the current state
+          originalTitle = titleText;
+          originalEntry = newText;
+          originalUnfinished = unfinished;
+
+          // Add the saved alert and debug log
+          alert(`Saved! (response status: ${ret?.status})`); // This should show the alert
+          console.log(
+            "Entry saved:",
+            selectedDate,
+            titleText,
+            newText,
+            unfinished
+          );
+        } catch (e) {
+          alert(`ERROR: ${e}`);
+        }
+      }
+
+      function checkUnsavedChanges() {
+        const currentTitle = document.getElementById("title").value;
+        const currentEntry = document.getElementById("journalEntry").value;
+        const currentUnfinished =
+          document.getElementById("unfinishedCheckbox").checked; // Corrected the checkbox ID
+
+        // Debugging log to check if the original values are correctly being compared to the current ones
+        console.log(
+          originalTitle,
+          currentTitle,
+          originalUnfinished,
+          currentUnfinished
+        );
+
+        // Check if any changes have been made since the page was loaded
+        if (
+          currentTitle !== originalTitle ||
+          currentEntry !== originalEntry ||
+          currentUnfinished !== originalUnfinished
+        ) {
+          return true;
+        }
+      }
+
+      window.addEventListener("beforeunload", (event) => {
+        if (checkUnsavedChanges()) {
+          const message =
+            "You have unsaved changes. Are you sure you want to leave?";
+          event.returnValue = message; // Standard for most browsers
+          return message; // For some browsers like older versions of Firefox
+        }
+      });
+
+      window.onload = () => {
+        gapiLoaded();
+        gisLoaded();
+      };
+    </script>
+    
+    <footer>
+      <a href="/read"> Read </a>
+      <a href="/status"> Status </a>
+    </footer>
+  </body>
+</html>
