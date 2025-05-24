@@ -93,6 +93,13 @@
         }
       }
 
+      function formatDateWithWeekday(date) {
+        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dateStr = date.toISOString().split("T")[0];
+        const weekday = weekdays[date.getDay()];
+        return `${dateStr} (${weekday})`;
+      }
+
       async function loadUnfinishedEntries() {
         const res = await gapi.client.sheets.spreadsheets.values.get({
           spreadsheetId: SHEET_ID,
@@ -109,6 +116,7 @@
         });
 
         const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
         const daysBack = 30;
 
         // make i = 1 to not include today
@@ -131,7 +139,7 @@
           if (isBlank || isMarkedUnfinished) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-        <td>${dateStr}</td>
+        <td>${formatDateWithWeekday(date)}</td>
         <td>${row?.[1] || "(No title)"}</td>
         <td>${entryText}</td>
       `;
