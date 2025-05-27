@@ -81,7 +81,9 @@
           scope: SCOPES,
           callback: (tokenResponse) => {
             gapi.client.setToken(tokenResponse);
-            loadUnfinishedEntries();
+            loadUnfinishedEntries().catch((error) => {
+              alert("ERROR:" + JSON.stringify(error));
+            });
           },
         });
         maybeEnableButtons();
