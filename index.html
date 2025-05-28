@@ -61,6 +61,14 @@
         font-weight: bold;
       }
 
+      #autosaveStatus {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+        min-height: 20px;
+        font-style: italic;
+      }
+
       @media (max-width: 600px) {
         h1 {
           font-size: 24px;
@@ -102,8 +110,8 @@
       placeholder="Enter the title of your journal entry"
     /><br />
 
-    <textarea id="journalEntry" placeholder="Write your entry..."></textarea
-    ><br />
+    <textarea id="journalEntry" placeholder="Write your entry..."></textarea>
+    <div id="autosaveStatus"></div><br />
 
     <label for="unfinishedCheckbox">
       <input type="checkbox" id="unfinishedCheckbox" />
@@ -128,6 +136,11 @@
       let originalEntry = "";
       let originalUnfinished = false;
 
+      // Autosave variables
+      let autosaveTimeout;
+      let isTyping = false;
+      const AUTOSAVE_DELAY = 1500; // 1.5 seconds
+
       document
         .getElementById("datePicker")
         .addEventListener("change", function() {
@@ -137,6 +150,79 @@
       document
         .getElementById("saveButton")
         .addEventListener("click", saveEntry);
+
+      // Add autosave event listeners
+      document.getElementById("title").addEventListener("input", handleInput);
+      document.getElementById("journalEntry").addEventListener("input", handleInput);
+      document.getElementById("unfinishedCheckbox").addEventListener("change", handleInput);
+
+      function handleInput() {
+        clearTimeout(autosaveTimeout);
+        isTyping = true;
+        
+        // Clear the autosave status when user starts typing
+        document.getElementById("autosaveStatus").textContent = "";
+        
+        // Set a new timeout for autosave
+        autosaveTimeout = setTimeout(() => {
+          isTyping = false;
+          performAutosave();
+        }, AUTOSAVE_DELAY);
+      }
+
+      async function performAutosave() {
+        // Only autosave if there are actual changes
+        if (!checkUnsavedChanges()) {
+          return;
+        }
+
+        const selectedDate = document.getElementById("datePicker").value;
+        if (!selectedDate) return;
+
+        // Check if the entry exists (can't create new entries via autosave)
+        const rowIndex = journalData.findIndex((row) => row[0] === selectedDate);
+        if (rowIndex === -1) {
+          // Don't autosave new entries, just show a message
+          document.getElementById("autosaveStatus").textContent = "New entry - use Save button to create";
+          return;
+        }
+
+        try {
+          const titleText = document.getElementById("title").value;
+          const newText = document.getElementById("journalEntry").value;
+          const unfinished = document.getElementById("unfinishedCheckbox").checked;
+
+          // Perform the save
+          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+          await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: range,
+            valueInputOption: "RAW",
+            resource: {
+              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+            },
+          });
+
+          // Update local data
+          journalData[rowIndex][1] = titleText;
+          journalData[rowIndex][2] = newText;
+          journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+
+          // Update original values
+          originalTitle = titleText;
+          originalEntry = newText;
+          originalUnfinished = unfinished;
+
+          // Show autosave confirmation
+          const now = new Date();
+          const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          document.getElementById("autosaveStatus").textContent = `Autosaved at ${timeString}`;
+
+        } catch (error) {
+          console.error("Autosave failed:", error);
+          document.getElementById("autosaveStatus").textContent = "Autosave failed";
+        }
+      }
 
       function updateWeekday() {
         const selectedDate = document.getElementById("datePicker").value;
@@ -236,6 +322,10 @@
           }
         }
 
+        // Clear any pending autosave when loading a new entry
+        clearTimeout(autosaveTimeout);
+        document.getElementById("autosaveStatus").textContent = "";
+
         const selectedDate = document.getElementById("datePicker").value;
         if (!selectedDate) return;
 
@@ -252,13 +342,16 @@
       }
 
       async function saveEntry() {
+        // Clear autosave timeout since we're manually saving
+        clearTimeout(autosaveTimeout);
+        
         const selectedDate = document.getElementById("datePicker").value;
         const titleText = document.getElementById("title").value;
         const newText = document.getElementById("journalEntry").value;
         const unfinished =
-          document.getElementById("unfinishedCheckbox").checked; // Make sure we reference the correct checkbox
+          document.getElementById("unfinishedCheckbox").checked;
 
-        if (!selectedDate) return; // Ensure we have a valid date selected
+        if (!selectedDate) return;
 
         let rowIndex = journalData.findIndex((row) => row[0] === selectedDate);
 
@@ -268,36 +361,12 @@
           titleText,
           newText,
           unfinished
-        ); // Debug log
-        // throw new Error("Parameter is not a number!");
+        );
 
         let ret = undefined;
 
         try {
           if (rowIndex === -1) {
-            // Adding a new entry to the sheet
-            // ret = await gapi.client.sheets.spreadsheets.values.append({
-            //   spreadsheetId: SHEET_ID,
-            //   range: "Sheet1!A:D",
-            //   valueInputOption: "RAW",
-            //   insertDataOption: "INSERT_ROWS",
-            //   resource: {
-            //     values: [
-            //       [
-            //         selectedDate,
-            //         titleText,
-            //         newText,
-            //         unfinished ? "TRUE" : "FALSE",
-            //       ],
-            //     ],
-            //   },
-            // });
-            // journalData.push([
-            //   selectedDate,
-            //   titleText,
-            //   newText,
-            //   unfinished ? "TRUE" : "FALSE",
-            // ]);
             throw new Error("Error: entry column doesnt exist");
           } else {
             // Updating an existing entry in the sheet
@@ -320,8 +389,9 @@
           originalEntry = newText;
           originalUnfinished = unfinished;
 
-          // Add the saved alert and debug log
-          alert(`Saved! (response status: ${ret?.status})`); // This should show the alert
+          // Clear autosave status and show manual save confirmation
+          document.getElementById("autosaveStatus").textContent = "";
+          alert(`Saved! (response status: ${ret?.status})`);
           console.log(
             "Entry saved:",
             selectedDate,
@@ -338,9 +408,8 @@
         const currentTitle = document.getElementById("title").value;
         const currentEntry = document.getElementById("journalEntry").value;
         const currentUnfinished =
-          document.getElementById("unfinishedCheckbox").checked; // Corrected the checkbox ID
+          document.getElementById("unfinishedCheckbox").checked;
 
-        // Debugging log to check if the original values are correctly being compared to the current ones
         console.log(
           originalTitle,
           currentTitle,
@@ -348,7 +417,6 @@
           currentUnfinished
         );
 
-        // Check if any changes have been made since the page was loaded
         if (
           currentTitle !== originalTitle ||
           currentEntry !== originalEntry ||
@@ -362,8 +430,8 @@
         if (checkUnsavedChanges()) {
           const message =
             "You have unsaved changes. Are you sure you want to leave?";
-          event.returnValue = message; // Standard for most browsers
-          return message; // For some browsers like older versions of Firefox
+          event.returnValue = message;
+          return message;
         }
       });
 
