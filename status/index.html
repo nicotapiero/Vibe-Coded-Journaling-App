@@ -121,7 +121,7 @@
         today.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
         const daysBack = 30;
         
-        let unfinishedEntriesExist = false;
+        let unfinishedEntriesCount = 0;
 
         // make i = 1 to not include today, 0 to include
         for (let i = 1; i <= daysBack; i++) {
@@ -148,13 +148,14 @@
         <td>${entryText}</td>
       `;
             tbody.appendChild(tr);
-            unfinishedEntriesExist = true
+            unfinishedEntriesCount += 1;
           }
         }
         
-        if (!unfinishedEntriesExist) {
+        if (!unfinishedEntriesCount) {
           alert('No unfinished entries! Good job!')
-        }
+        } else {
+          alert(unfinishedEntriesCount + ' unfinished entries');
       }
 
       window.onload = () => {
