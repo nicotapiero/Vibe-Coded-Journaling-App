@@ -329,7 +329,10 @@
         selector.innerHTML = '<option value="">Choose an entry...</option>';
         
         allEntries.forEach((entry, index) => {
-          const date = new Date(entry.date);
+          // Parse date as local date to avoid timezone issues
+          const dateParts = entry.date.split('-');
+          const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+          
           const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -362,7 +365,10 @@
       }
 
       function displayEntry(entry) {
-        const date = new Date(entry.date);
+        // Parse date as local date to avoid timezone issues
+        const dateParts = entry.date.split('-');
+        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+        
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                            'July', 'August', 'September', 'October', 'November', 'December'];
