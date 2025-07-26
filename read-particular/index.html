@@ -477,7 +477,9 @@
         }
         
         const currentEntry = allEntries[currentIndex];
-        const currentDate = new Date(currentEntry.date.split('-').map((part, i) => i === 1 ? parseInt(part) - 1 : parseInt(part)));
+        // Parse date correctly - split and convert to numbers properly
+        const dateParts = currentEntry.date.split('-');
+        const currentDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
         
         // Find the next/previous entry by date
         let targetDate = new Date(currentDate);
