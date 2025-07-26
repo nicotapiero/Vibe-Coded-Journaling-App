@@ -182,6 +182,38 @@
         margin-top: 10px;
       }
 
+      .navigation-buttons {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .nav-btn {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+      }
+
+      .nav-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      .nav-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
       @media (max-width: 768px) {
         .container {
           margin: 10px;
@@ -210,8 +242,14 @@
           min-width: auto;
         }
         
-        .entry-content {
-          padding: 25px;
+        .navigation-buttons {
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .nav-btn {
+          width: 100%;
+          max-width: 200px;
         }
       }
     </style>
@@ -232,6 +270,11 @@
           <select id="entrySelector" class="entry-selector" onchange="displaySelectedEntry()">
             <option value="">Choose an entry...</option>
           </select>
+          <div class="navigation-buttons">
+            <button class="nav-btn" onclick="jumpToToday()">📅 Today</button>
+            <button class="nav-btn" onclick="navigateDay(-1)">← Previous Day</button>
+            <button class="nav-btn" onclick="navigateDay(1)">Next Day →</button>
+          </div>
           <div id="entryCount" class="entry-count"></div>
         </div>
 
@@ -309,7 +352,7 @@
               entry: row[2] || "No content available",
               unfinished: row[3] && row[3].toUpperCase() === "TRUE"
             }))
-            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort newest first
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort oldest first (chronological)
 
           populateDropdown();
           document.getElementById('loadingMessage').classList.add('hidden');
@@ -402,6 +445,55 @@
           behavior: 'smooth', 
           block: 'start' 
         });
+      }
+
+      function jumpToToday() {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const todayEntryIndex = allEntries.findIndex(entry => entry.date === todayStr);
+        
+        if (todayEntryIndex !== -1) {
+          document.getElementById('entrySelector').selectedIndex = todayEntryIndex + 1; // +1 because of the first "Choose an entry..." option
+          displaySelectedEntry();
+        } else {
+          alert('No entry found for today');
+        }
+      }
+
+      function navigateDay(direction) {
+        const selector = document.getElementById('entrySelector');
+        const currentIndex = parseInt(selector.value);
+        
+        if (isNaN(currentIndex)) {
+          // If no entry selected, jump to today or first/last entry
+          if (direction === 1) {
+            selector.selectedIndex = 1; // First entry
+          } else {
+            selector.selectedIndex = allEntries.length; // Last entry
+          }
+          displaySelectedEntry();
+          return;
+        }
+        
+        const currentEntry = allEntries[currentIndex];
+        const currentDate = new Date(currentEntry.date.split('-').map((part, i) => i === 1 ? parseInt(part) - 1 : parseInt(part)));
+        
+        // Find the next/previous entry by date
+        let targetDate = new Date(currentDate);
+        targetDate.setDate(targetDate.getDate() + direction);
+        
+        const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+        
+        const targetEntryIndex = allEntries.findIndex(entry => entry.date === targetDateStr);
+        
+        if (targetEntryIndex !== -1) {
+          selector.selectedIndex = targetEntryIndex + 1; // +1 because of the first "Choose an entry..." option
+          displaySelectedEntry();
+        } else {
+          const directionText = direction === 1 ? 'next' : 'previous';
+          alert(`No entry found for the ${directionText} day`);
+        }
       }
 
       window.onload = () => {
