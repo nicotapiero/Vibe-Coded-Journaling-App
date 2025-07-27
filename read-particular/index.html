@@ -68,24 +68,13 @@
       Select an entry from the dropdown above to start reading.
     </div>
 
-    <table id="entryDisplay" style="display: none;">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Title</th>
-          <th>Entry</th>
-          <th>Unfinished</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td id="entryDate"></td>
-          <td id="entryTitle"></td>
-          <td id="entryContent"></td>
-          <td id="entryStatus"></td>
-        </tr>
-      </tbody>
-    </table>
+    <div id="entryDisplay" style="display: none;">
+      <h2 id="entryTitle"></h2>
+      <p><strong>Date:</strong> <span id="entryDate"></span></p>
+      <p><strong>Status:</strong> <span id="entryStatus"></span></p>
+      <hr>
+      <div id="entryContent"></div>
+    </div>
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
@@ -145,8 +134,8 @@
             .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort oldest first (chronological)
 
           populateDropdown();
-          document.getElementById('loadingMessage').classList.add('hidden');
-          document.getElementById('noSelection').classList.remove('hidden');
+          document.getElementById('loadingMessage').style.display = 'none';
+          document.getElementById('noSelection').style.display = 'block';
           
         } catch (error) {
           console.error('Error loading entries:', error);
@@ -218,14 +207,14 @@
         
         const statusElement = document.getElementById('entryStatus');
         if (entry.unfinished) {
-          statusElement.innerHTML = '<span class="unfinished">Yes</span>';
+          statusElement.innerHTML = '<span class="unfinished">Unfinished</span>';
         } else {
-          statusElement.innerHTML = '<span class="finished">No</span>';
+          statusElement.innerHTML = '<span class="finished">Complete</span>';
         }
         
         document.getElementById('loadingMessage').style.display = 'none';
         document.getElementById('noSelection').style.display = 'none';
-        document.getElementById('entryDisplay').style.display = 'table';
+        document.getElementById('entryDisplay').style.display = 'block';
       }
 
       function jumpToToday() {
