@@ -5,252 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Journal Reader</title>
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
       body {
-        font-family: 'Georgia', serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
+        font-family: Arial, sans-serif;
         padding: 20px;
       }
 
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        overflow: hidden;
-      }
-
-      .header {
-        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-        color: white;
-        padding: 30px;
-        text-align: center;
-      }
-
-      .header h1 {
-        font-size: 2.5em;
-        margin-bottom: 10px;
-        font-weight: 300;
-        letter-spacing: 2px;
-      }
-
-      .header p {
-        opacity: 0.8;
-        font-size: 1.1em;
-      }
-
-      .content {
-        padding: 40px;
-      }
-
-      .selector-section {
-        text-align: center;
-        margin-bottom: 40px;
-      }
-
-      .selector-section h2 {
-        color: #2c3e50;
+      h1 {
         margin-bottom: 20px;
-        font-weight: 400;
       }
 
-      .entry-selector {
+      table {
         width: 100%;
-        max-width: 600px;
-        padding: 15px 20px;
-        font-size: 16px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        background: #f8f9fa;
-        color: #2c3e50;
-        transition: all 0.3s ease;
-        cursor: pointer;
+        border-collapse: collapse;
       }
 
-      .entry-selector:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-
-      .entry-selector option {
+      th, td {
         padding: 10px;
-        font-size: 15px;
+        border: 1px solid #ccc;
+        text-align: left;
+        vertical-align: top;
       }
 
-      .entry-display {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 0;
-        overflow: hidden;
-        border: 1px solid #e0e0e0;
-        margin-top: 30px;
+      th {
+        background-color: #f2f2f2;
       }
 
-      .entry-header {
-        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-        color: white;
-        padding: 25px 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 15px;
+      tr:nth-child(even) {
+        background-color: #fafafa;
       }
-
-      .entry-title {
-        font-size: 1.6em;
-        font-weight: 400;
-        flex: 1;
-        min-width: 200px;
+      
+      .unfinished {
+        background-color: #EA526F;
       }
-
-      .entry-date {
-        font-size: 1em;
-        opacity: 0.9;
-        white-space: nowrap;
-      }
-
-      .entry-content {
-        padding: 40px;
-        background: white;
-        line-height: 1.8;
-        font-size: 1.1em;
-        color: #2c3e50;
-        min-height: 200px;
-      }
-
-      .entry-content p {
-        margin-bottom: 20px;
-      }
-
-      .entry-content p:last-child {
-        margin-bottom: 0;
-      }
-
-      .entry-status {
-        padding: 20px 30px;
-        background: #f8f9fa;
-        border-top: 1px solid #e0e0e0;
-        text-align: center;
-        font-size: 1em;
-      }
-
-      .status-complete {
-        color: #27ae60;
-        font-weight: 500;
-      }
-
-      .status-incomplete {
-        color: #e74c3c;
-        font-weight: 500;
-      }
-
-      .loading {
-        text-align: center;
-        color: #666;
-        font-style: italic;
-        padding: 60px;
-        font-size: 1.1em;
-      }
-
-      .no-selection {
-        text-align: center;
-        color: #666;
-        font-style: italic;
-        padding: 60px;
-        background: #f8f9fa;
-        border-radius: 12px;
-        border: 2px dashed #e0e0e0;
-        font-size: 1.1em;
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      .entry-count {
-        color: #666;
-        font-size: 0.9em;
-        margin-top: 10px;
-      }
-
-      .navigation-buttons {
-        margin-top: 15px;
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .nav-btn {
-        padding: 10px 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 500;
-      }
-
-      .nav-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-      }
-
-      .nav-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      @media (max-width: 768px) {
-        .container {
-          margin: 10px;
-          border-radius: 15px;
-        }
-        
-        .content {
-          padding: 20px;
-        }
-        
-        .header {
-          padding: 20px;
-        }
-        
-        .header h1 {
-          font-size: 2em;
-        }
-        
-        .entry-header {
-          flex-direction: column;
-          align-items: flex-start;
-          text-align: left;
-        }
-        
-        .entry-title {
-          min-width: auto;
-        }
-        
-        .navigation-buttons {
-          flex-direction: column;
-          align-items: center;
-        }
-        
-        .nav-btn {
-          width: 100%;
-          max-width: 200px;
-        }
+      
+      .finished {
+        background-color: #629677;
       }
     </style>
 
@@ -258,44 +47,45 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>Journal Reader</h1>
-        <p>Select an entry from the dropdown to read</p>
-      </div>
-
-      <div class="content">
-        <div class="selector-section">
-          <h2>Select a Journal Entry</h2>
-          <select id="entrySelector" class="entry-selector" onchange="displaySelectedEntry()">
-            <option value="">Choose an entry...</option>
-          </select>
-          <div class="navigation-buttons">
-            <button class="nav-btn" onclick="jumpToToday()">📅 Today</button>
-            <button class="nav-btn" onclick="navigateDay(-1)">← Previous Day</button>
-            <button class="nav-btn" onclick="navigateDay(1)">Next Day →</button>
-          </div>
-          <div id="entryCount" class="entry-count"></div>
-        </div>
-
-        <div id="loadingMessage" class="loading">
-          Loading your journal entries...
-        </div>
-
-        <div id="noSelection" class="no-selection hidden">
-          Select an entry from the dropdown above to start reading.
-        </div>
-
-        <div id="entryDisplay" class="entry-display hidden">
-          <div class="entry-header">
-            <div class="entry-title" id="entryTitle"></div>
-            <div class="entry-date" id="entryDate"></div>
-          </div>
-          <div class="entry-content" id="entryContent"></div>
-          <div class="entry-status" id="entryStatus"></div>
-        </div>
-      </div>
+    <h1>Journal Reader</h1>
+    
+    <label for="entrySelector">Select a Journal Entry:</label>
+    <select id="entrySelector" onchange="displaySelectedEntry()">
+      <option value="">Choose an entry...</option>
+    </select>
+    
+    <div>
+      <button onclick="jumpToToday()">Today</button>
+      <button onclick="navigateDay(-1)">← Previous Day</button>
+      <button onclick="navigateDay(1)">Next Day →</button>
     </div>
+    
+    <div id="entryCount"></div>
+
+    <div id="loadingMessage">Loading your journal entries...</div>
+
+    <div id="noSelection" style="display: none;">
+      Select an entry from the dropdown above to start reading.
+    </div>
+
+    <table id="entryDisplay" style="display: none;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Title</th>
+          <th>Entry</th>
+          <th>Unfinished</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="entryDate"></td>
+          <td id="entryTitle"></td>
+          <td id="entryContent"></td>
+          <td id="entryStatus"></td>
+        </tr>
+      </tbody>
+    </table>
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
@@ -398,8 +188,8 @@
         const selectedIndex = selector.value;
         
         if (selectedIndex === '') {
-          document.getElementById('entryDisplay').classList.add('hidden');
-          document.getElementById('noSelection').classList.remove('hidden');
+          document.getElementById('entryDisplay').style.display = 'none';
+          document.getElementById('noSelection').style.display = 'block';
           return;
         }
         
@@ -422,29 +212,20 @@
         document.getElementById('entryDate').textContent = formattedDate;
         
         // Format the entry content - convert line breaks to paragraphs
-        const formattedContent = entry.entry
-          .split('\n')
-          .filter(line => line.trim() !== '')
-          .map(line => `<p>${line.trim()}</p>`)
-          .join('');
+        const formattedContent = entry.entry.replace(/\n/g, "<br>");
         
-        document.getElementById('entryContent').innerHTML = formattedContent || '<p><em>No content available for this entry.</em></p>';
+        document.getElementById('entryContent').innerHTML = formattedContent || '<em>No content available for this entry.</em>';
         
         const statusElement = document.getElementById('entryStatus');
         if (entry.unfinished) {
-          statusElement.innerHTML = '<span class="status-incomplete">⚠️ This entry is marked as unfinished</span>';
+          statusElement.innerHTML = '<span class="unfinished">Yes</span>';
         } else {
-          statusElement.innerHTML = '<span class="status-complete">✓ This entry is complete</span>';
+          statusElement.innerHTML = '<span class="finished">No</span>';
         }
         
-        document.getElementById('noSelection').classList.add('hidden');
-        document.getElementById('entryDisplay').classList.remove('hidden');
-        
-        // Smooth scroll to entry
-        document.getElementById('entryDisplay').scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('noSelection').style.display = 'none';
+        document.getElementById('entryDisplay').style.display = 'table';
       }
 
       function jumpToToday() {
