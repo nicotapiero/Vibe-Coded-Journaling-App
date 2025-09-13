@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Docs API Quickstart</title>
+    <meta charset="utf-8" />
+
+    <style>
+      pre {
+        white-space: pre-wrap; /* Since CSS 2.1 */
+        white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+        white-space: -pre-wrap; /* Opera 4-6 */
+        white-space: -o-pre-wrap; /* Opera 7 */
+        word-wrap: break-word; /* Internet Explorer 5.5+ */
+      }
+    </style>
+
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.glitch.global/130acd19-ddc8-473c-9ab1-09912f41140b/book-512-open.png?v=1643151318965"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="./constants.js"></script>
+    <script src="./sharedFunctionality.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  </head>
+
+  <body>
+    <p>Google Docs API Quickstart</p>
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button id="authorize_button" style="display: none">Authorize</button>
+    <button id="signout_button" style="display: none">Sign Out</button>
+
+    <script>
+      const divider =
+        "\n----------------------------------------------------------------------------------------------------------------------------\n";
+
+      function selectDoc() {
+        let selected = $("#docSelector").find(":selected").val();
+        $("#content").html("");
+        appendPre(
+          "Loading " + $("#docSelector").find(":selected").text() + "....."
+        );
+
+        console.log(selected);
+        currDocId = selected;
+
+        $("#entrySelector").empty();
+        entries = {};
+
+        createDateToEntryMapping();
+      }
+      function selectEntry() {
+        let selected = $("#entrySelector").find(":selected").val();
+        console.log(selected);
+        console.log($("#appendOrNot").is(":checked"));
+        if (!$("#appendOrNot").is(":checked")) {
+          console.log("hi");
+          $("#content").html("");
+          $("#divContent").html("");
+          $("#images").html("");
+        }
+
+        function getASCIIArray(str) {
+          const asciiArray = [];
+          for (let i = 0; i < str.length; i++) {
+            asciiArray.push([str.charCodeAt(i), str.charAt(i)]);
+          }
+          return asciiArray;
+        }
+
+        const myString = "Hello";
+        const asciiCodes = getASCIIArray(entries[selected]);
+        console.log(asciiCodes); // Output: [72, 101, 108, 108, 111]
+
+        console.log(
+          entries[selected],
+          entries[selected].endsWith("\n" + divider)
+        );
+        let lastChar = entries[selected].slice(0, -divider.length).slice(-1);
+        console.log("ast char", lastChar, lastChar.charCodeAt(0));
+
+        if (entries[selected].endsWith("\n\n" + divider) || lastChar == "\n") {
+          document.getElementById("content").style.borderColor = "red";
+          document.getElementById("content").style.borderWidth = "2px";
+          document.getElementById("content").style.borderStyle = "solid";
+        } else {
+          document.getElementById("content").style.borderColor = "blue";
+          document.getElementById("content").style.borderWidth = "0px";
+          document.getElementById("content").style.borderStyle = "solid";
+          // .style.removeProperty('zoom');
+        }
+
+        //always append both to the pre content
+        appendPre(entries[selected]);
+        // and to the divContent
+        let old = document.getElementById("divContent").innerHTML;
+
+        let entry = entries[selected];
+        //get rid of ------- divider, it causes markdown to think it's a header
+        if (entry.substring(entry.length - divider.length) == divider) {
+          entry =
+            entry.substring(0, entry.length - divider.length) +
+            "\n\n" +
+            divider;
+        }
+        document.getElementById("divContent").innerHTML =
+          old + marked.parse(entry); //markdown rendering
+
+        images?.[selected]?.forEach((imageURL) => {
+          let img = document.createElement("img");
+          img.setAttribute("src", imageURL);
+          // img.setAttribute("height", "768");
+          img.setAttribute("width", "200");
+          // img.setAttribute("alt", "Flower");
+          document.getElementById("images").appendChild(img);
+        });
+      }
+
+      function selectNextEntry() {
+        $("#entrySelector > option:selected")
+          .prop("selected", false)
+          .next()
+          .prop("selected", true);
+        selectEntry();
+      }
+      function selectPreviousEntry() {
+        $("#entrySelector > option:selected")
+          .prop("selected", false)
+          .prev()
+          .prop("selected", true);
+        selectEntry();
+      }
+
+      var oldContentsInPre = null;
+      function renderMarkdownToggle() {
+        if ($("#renderMarkdown").is(":checked")) {
+          console.log("turn on");
+          $("#divContent").attr("hidden", false);
+          $("#content").attr("hidden", true);
+          return;
+
+          // var textContent = document.createTextNode(message + '\n');
+          // pre.appendChild(textContent);
+        } else {
+          console.log("turn of");
+          $("#divContent").attr("hidden", true);
+          $("#content").attr("hidden", false);
+        }
+      }
+
+      function renderImagesToggle() {
+        if ($("#renderImages").is(":checked")) {
+          console.log("turn on images");
+          $("#images").attr("hidden", false);
+        } else {
+          console.log("turn off images");
+          $("#images").attr("hidden", true);
+        }
+      }
+    </script>
+    Document:
+    <select id="docSelector" onchange="javascript:selectDoc()"></select>
+    Entry:
+    <select id="entrySelector" onchange="javascript:selectEntry()"></select>
+    <button onclick="selectPreviousEntry()">&lt; Previous Entry</button>
+    <button onclick="selectNextEntry()">Next Entry &gt;</button>
+    <input id="appendOrNot" type="checkbox" />Append to bottom?
+    <input
+      id="renderMarkdown"
+      type="checkbox"
+      onchange="javascript:renderMarkdownToggle()"
+    />Render Markdown?
+    <input
+      id="renderImages"
+      type="checkbox"
+      onchange="javascript:renderImagesToggle()"
+    />Render Images?
+
+    <div id="images" hidden="true">hi</div>
+    <pre id="content"></pre>
+    <div id="divContent" hidden="true"></div>
+
+    <script type="text/javascript">
+      // object to hold the entries like a dict
+      var entries = {};
+
+      var images = {};
+
+      var currDocId = DOCUMENT_ID;
+
+      // var myVal = undefined;
+
+      LEGACY_DOCUMENT_IDS.forEach((idObject) => {
+        console.log(idObject);
+        const [docName, id] = Object.entries(idObject)[0];
+        console.log(`${docName}: ${id}`);
+
+        $("#docSelector").append(
+          $("<option>", {
+            value: id,
+            text: docName,
+          })
+        );
+      });
+      // // Ususally is fine, unless you're behind a year
+      var myVal = $("#docSelector option:last").val();
+      // console.log('NICO', myVal)
+
+      $("#docSelector").val(myVal);
+
+      // Client ID and API key from the Developer Console
+
+      // Array of API discovery doc URLs for APIs used by the quickstart
+      var DISCOVERY_DOCS = [
+        "https://docs.googleapis.com/$discovery/rest?version=v1",
+      ];
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      var SCOPES = "https://www.googleapis.com/auth/documents.readonly";
+
+      var authorizeButton = document.getElementById("authorize_button");
+      var signoutButton = document.getElementById("signout_button");
+
+      /**
+       *  On load, called to load the auth2 library and API client library.
+       */
+      function handleClientLoad() {
+        gapi.load("client:auth2", initClient);
+      }
+
+      /**
+       *  Initializes the API client library and sets up sign-in state
+       *  listeners.
+       */
+      function initClient() {
+        gapi.client
+          .init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: DISCOVERY_DOCS,
+            scope: SCOPES,
+          })
+          .then(function () {
+            // Listen for sign-in state changes.
+            gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+            // Handle the initial sign-in state.
+            updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+            authorizeButton.onclick = handleAuthClick;
+            signoutButton.onclick = handleSignoutClick;
+          });
+      }
+
+      /**
+       *  Called when the signed in status changes, to update the UI
+       *  appropriately. After a sign-in, the API is called.
+       */
+      function updateSigninStatus(isSignedIn) {
+        if (isSignedIn) {
+          authorizeButton.style.display = "none";
+          signoutButton.style.display = "block";
+          createDateToEntryMapping();
+        } else {
+          authorizeButton.style.display = "block";
+          signoutButton.style.display = "none";
+        }
+      }
+
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
+
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+
+      /**
+       * Append a pre element to the body containing the given message
+       * as its text node. Used to display the results of the API call.
+       *
+       * @param {string} message Text to be placed in pre element.
+       */
+      function appendPre(message) {
+        var pre = document.getElementById("content");
+        var textContent = document.createTextNode(message + "\n");
+        pre.appendChild(textContent);
+      }
+
+      function setImagesIfPossible(currEntryString, currDateKey, images) {
+        let imageRegex = /<([^>]*)>/;
+        let imageMatch = currEntryString.match(imageRegex);
+        // console.log(currEntryString)
+        if (imageMatch) {
+          console.log(
+            "hi nicooo",
+            images[currDateKey],
+            currDateKey,
+            imageMatch[1].split(", ")
+          );
+          images[currDateKey] = [...imageMatch[1].split(", ")];
+          console.log(images);
+        }
+      }
+
+      /**
+       * Fills 'entries' var
+       */
+      function createDateToEntryMapping() {
+        gapi.client.docs.documents
+          .get({
+            documentId: currDocId,
+          })
+          .then(
+            function (response) {
+              var doc = response.result;
+              var title = doc.title;
+              appendPre('Document "' + title + '" successfully found.\n');
+
+              let body = JSON.parse(response.body);
+
+              // console.log(body)
+
+              // regex only to match to < char
+              // TODO: "" chars could break it
+              let dateRegex =
+                /(\d{4}\-(0?[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01]) \((Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\)( \| ".*?"| <|: )|\d{4}\-(0?[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01]): )/;
+
+              let currEntryString = "";
+              let currDateKey = "";
+              body.body.content.forEach((item) => {
+                let paragraphText =
+                  item?.paragraph?.elements?.[0].textRun?.content;
+
+                if (item?.paragraph?.elements?.length > 1) {
+                  console.log("multiple elements", item.paragraph.elements);
+                  paragraphText = item.paragraph.elements.reduce(
+                    (accumulator, elem) => accumulator + elem?.textRun?.content,
+                    ""
+                  );
+                }
+
+                // console.log(paragraphText)
+
+                const found = paragraphText?.match(dateRegex);
+
+                // means it's the start of a new entry
+                if (found) {
+                  // currDateKey is a little hacky because it assumes the header that is always present
+                  // i.e. first currDateKey is indeed just the empty string
+                  entries[currDateKey] = currEntryString;
+                  console.log(currDateKey, "dick");
+
+                  // Image stuff
+                  setImagesIfPossible(currEntryString, currDateKey, images);
+                  $("#entrySelector").append(
+                    $("<option>", {
+                      value: currDateKey,
+                      text:
+                        currDateKey +
+                        `(${getWordCount(currEntryString)} words)`,
+                    })
+                  );
+
+                  // Found is the regex match for the date,
+                  // other elements in the array are like pieces of that date
+                  let date =
+                    found[0][found[0].length - 1] == '"'
+                      ? found[0]
+                      : found[0].substring(0, found[0].length - 2);
+
+                  currDateKey = date;
+                  currEntryString = "";
+
+                  // console.log(date.substring(8, 10))
+
+                  //             if (date.substring(8, 10) == "01") {
+                  //               appendPre('')
+                  //             }
+
+                  //             appendPre(date)
+                }
+
+                currEntryString += paragraphText;
+              });
+
+              //straggler -
+              // NOTE: duplicate dated entries won't work, and sometimes unexpected behavior (switching between entries)
+              if (!entries[currDateKey]) {
+                console.log("hi");
+                entries[currDateKey] = currEntryString;
+
+                setImagesIfPossible(currEntryString, currDateKey, images);
+
+                $("#entrySelector").append(
+                  $("<option>", {
+                    value: currDateKey,
+                    text: currDateKey,
+                  })
+                );
+              }
+
+              // var myVal = $('#entrySelector option:last').val();
+              // $('#entrySelector').val(myVal);
+              // selectEntry()
+            },
+            function (response) {
+              appendPre("Error: " + response.result.error.message);
+            }
+          );
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "ArrowLeft") selectPreviousEntry();
+        else if (e.code === "ArrowRight") selectNextEntry();
+      });
+    </script>
+    <script
+      async=""
+      defer=""
+      onload="this.onload=function(){};handleClientLoad()"
+      onreadystatechange="if (this.readyState === 'complete') this.onload()"
+      src="https://apis.google.com/js/api.js"
+    ></script>
+  </body>
+</html>
