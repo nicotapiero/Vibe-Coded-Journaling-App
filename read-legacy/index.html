@@ -70,6 +70,9 @@
       // included, separated by spaces.
       const SCOPES = 'https://www.googleapis.com/auth/documents.readonly';
 
+      var authorizeButton = document.getElementById("authorize_button");
+      var signoutButton = document.getElementById("signout_button");
+
       let tokenClient;
       let gapiInited = false;
       let gisInited = false;
