@@ -24,6 +24,7 @@
         padding: 10px;
         border: 1px solid #ccc;
         text-align: left;
+        vertical-align: top;
       }
 
       th {
@@ -32,6 +33,24 @@
 
       tr:nth-child(even) {
         background-color: #fafafa;
+      }
+
+      .entry-container {
+        position: relative;
+        max-height: 5.5em; /* ~4 lines */
+        overflow: hidden;
+      }
+
+      .entry-container.expanded {
+        max-height: none;
+      }
+
+      .show-more-link {
+        color: blue;
+        cursor: pointer;
+        display: inline-block;
+        margin-top: 5px;
+        font-size: 0.9em;
       }
     </style>
 
@@ -109,7 +128,7 @@
         });
 
         const data = res.result.values || [];
-        const tbody = document.querySelector("#unfinishedTable tbody");
+         const tbody = document.querySelector("#unfinishedTable tbody");
 
         // Convert spreadsheet rows into a map for quick lookup
         const entriesMap = new Map();
@@ -145,21 +164,65 @@
 
           if (isBlank || isMarkedUnfinished) {
             const tr = document.createElement("tr");
+
+            const maxLength = 200;
+            let truncated = false;
+            let displayText = entryText;
+
+            // Strip HTML to count plain text characters
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = entryText;
+            const plainText = tempDiv.textContent || tempDiv.innerText || "";
+
+            if (plainText.length > maxLength) {
+              truncated = true;
+              const shortText = plainText.substring(0, maxLength) + "...";
+              displayText = shortText.replace(/\n/g, "<br>");
+            }
+
+            const tdEntry = document.createElement("td");
+            tdEntry.innerHTML = `
+              <div class="entry-container${truncated ? '' : ' expanded'}">
+                <div class="entry-text">${displayText}</div>
+                ${truncated ? '<span class="show-more-link">Show more</span>' : ''}
+              </div>
+            `;
+
+            if (truncated) {
+              tdEntry.querySelector(".show-more-link").addEventListener("click", function () {
+                const container = this.parentElement;
+                const textDiv = container.querySelector(".entry-text");
+
+                if (container.classList.contains("expanded")) {
+                  // Collapse
+                  const shortText = plainText.substring(0, maxLength) + "...";
+                  textDiv.innerHTML = shortText.replace(/\n/g, "<br>");
+                  this.textContent = "Show more";
+                  container.classList.remove("expanded");
+                } else {
+                  // Expand
+                  textDiv.innerHTML = entryText;
+                  this.textContent = "Show less";
+                  container.classList.add("expanded");
+                }
+              });
+            }
+
             tr.innerHTML = `
-        <td>${formatDateWithWeekday(date)}</td>
-        <td>${row?.[1] || "(No title)"}</td>
-        <td>${entryText}</td>
-      `;
+              <td>${formatDateWithWeekday(date)}</td>
+              <td>${row?.[1] || "(No title)"}</td>
+            `;
+            tr.appendChild(tdEntry);
             tbody.appendChild(tr);
-            unfinishedEntriesCount += 1;
+            unfinishedEntriesCount++;
           }
         }
-        
+
         if (!unfinishedEntriesCount) {
-          alert('No unfinished entries! Good job!')
+          alert('No unfinished entries! Good job!');
         } else {
           alert(unfinishedEntriesCount + ' unfinished entries');
-          }
+        }
       }
 
       window.onload = () => {
