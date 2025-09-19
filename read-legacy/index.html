@@ -261,6 +261,8 @@
         if (gapiInited && gisInited) {
           document.getElementById('authorize_button').style.visibility = 'visible';
           initializeDocumentSelector();
+          authorizeButton.onclick = handleAuthClick;
+          signoutButton.onclick = handleSignoutClick;
         }
       }
 
