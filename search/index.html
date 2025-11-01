@@ -51,6 +51,36 @@
       padding: 2px 5px;
       border-radius: 4px;
     }
+    /* Popup modal */
+    #popup {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+    }
+    #popupContent {
+      background: white;
+      padding: 20px;
+      margin: 80px auto;
+      max-width: 600px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    #popupClose {
+      float: right;
+      cursor: pointer;
+      font-weight: bold;
+      color: #666;
+    }
+    #popupClose:hover {
+      color: black;
+    }
+    mark {
+      background-color: yellow;
+      padding: 0;
+    }
   </style>
 
   <script src="https://apis.google.com/js/api.js"></script>
@@ -77,6 +107,18 @@
     <tbody></tbody>
   </table>
 
+  <!-- Popup modal -->
+  <div id="popup">
+    <div id="popupContent">
+      <span id="popupClose" onclick="closePopup()">✖</span>
+      <h2 id="popupTitle"></h2>
+      <p><strong>Date:</strong> <span id="popupDate"></span></p>
+      <p><strong>Status:</strong> <span id="popupStatus"></span></p>
+      <hr>
+      <div id="popupText"></div>
+    </div>
+  </div>
+
   <script>
     const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
     const RANGE = "Sheet1!A:D";
@@ -86,6 +128,7 @@
     let gapiInited = false;
     let tokenClient;
     let allEntries = [];
+    let currentQuery = "";
 
     function gapiLoaded() {
       gapi.load("client", initializeGapiClient);
@@ -143,6 +186,7 @@
 
     function searchEntries() {
       const query = document.getElementById("searchBox").value.trim().toLowerCase();
+      currentQuery = query;
       const table = document.getElementById("resultsTable");
       const tbody = table.querySelector("tbody");
       const info = document.getElementById("resultsInfo");
@@ -175,9 +219,7 @@
           weekday: "short", year: "numeric", month: "short", day: "numeric"
         });
 
-        const excerpt = entry.entry.length > 120
-          ? entry.entry.substring(0, 120) + "..."
-          : entry.entry || "<em>No content</em>";
+        const excerpt = getContextExcerpt(entry.entry, query);
 
         tr.innerHTML = `
           <td>${formattedDate}</td>
@@ -187,11 +229,60 @@
             ${entry.unfinished ? "Unfinished" : "Complete"}
           </span></td>
         `;
+
+        tr.style.cursor = "pointer";
+        tr.onclick = () => showPopup(entry);
         tbody.appendChild(tr);
       });
 
       table.style.display = "table";
     }
+
+    function getContextExcerpt(text, query) {
+      const lowerText = text.toLowerCase();
+      const index = lowerText.indexOf(query);
+      if (index === -1) return text.substring(0, 100) + "...";
+
+      const start = Math.max(0, index - 40);
+      const end = Math.min(text.length, index + query.length + 40);
+      let snippet = text.substring(start, end);
+      
+      // Highlight match
+      const regex = new RegExp(`(${query})`, "ig");
+      snippet = snippet.replace(regex, "<mark>$1</mark>");
+
+      return (start > 0 ? "…" : "") + snippet + (end < text.length ? "…" : "");
+    }
+
+    function showPopup(entry) {
+      const popup = document.getElementById("popup");
+      const formattedDate = new Date(entry.date).toLocaleDateString(undefined, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+
+      document.getElementById("popupTitle").textContent = entry.title;
+      document.getElementById("popupDate").textContent = formattedDate;
+      document.getElementById("popupStatus").innerHTML =
+        `<span class="${entry.unfinished ? "unfinished" : "finished"}">
+          ${entry.unfinished ? "Unfinished" : "Complete"}
+        </span>`;
+      
+      // Highlight the search word in the full text
+      const regex = new RegExp(`(${currentQuery})`, "ig");
+      const highlighted = entry.entry.replace(regex, "<mark>$1</mark>").replace(/\n/g, "<br>");
+      document.getElementById("popupText").innerHTML = highlighted;
+
+      popup.style.display = "block";
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      const popup = document.getElementById("popup");
+      if (event.target === popup) closePopup();
+    };
 
     window.onload = () => {
       gapiLoaded();
