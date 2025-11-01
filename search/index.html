@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal Search</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 8px;
+      font-size: 16px;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+    .unfinished {
+      background-color: #EA526F;
+      color: white;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .finished {
+      background-color: #629677;
+      color: white;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+  </style>
+
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <h1>Journal Search</h1>
+
+  <input type="text" id="searchBox" placeholder="Search for a word or phrase..." />
+  <button onclick="searchEntries()">Search</button>
+
+  <div id="loadingMessage">Loading your journal entries...</div>
+  <div id="resultsInfo"></div>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Title</th>
+        <th>Excerpt</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
+    const RANGE = "Sheet1!A:D";
+    const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
+    const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+    let gapiInited = false;
+    let tokenClient;
+    let allEntries = [];
+
+    function gapiLoaded() {
+      gapi.load("client", initializeGapiClient);
+    }
+
+    async function initializeGapiClient() {
+      await gapi.client.init({
+        discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+      });
+      gapiInited = true;
+      maybeEnableButtons();
+    }
+
+    function gisLoaded() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (tokenResponse) => {
+          gapi.client.setToken(tokenResponse);
+          loadAllEntries();
+        },
+      });
+      maybeEnableButtons();
+    }
+
+    function maybeEnableButtons() {
+      if (gapiInited && tokenClient) {
+        tokenClient.requestAccessToken();
+      }
+    }
+
+    async function loadAllEntries() {
+      try {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: RANGE,
+        });
+
+        const data = res.result.values || [];
+        allEntries = data.filter(row => row[0])
+          .map(row => ({
+            date: row[0],
+            title: row[1] || "Untitled Entry",
+            entry: row[2] || "",
+            unfinished: row[3] && row[3].toUpperCase() === "TRUE"
+          }))
+          .sort((a, b) => new Date(b.date) - new Date(a.date)); // newest first
+
+        document.getElementById("loadingMessage").style.display = "none";
+      } catch (err) {
+        console.error("Error loading entries:", err);
+        document.getElementById("loadingMessage").textContent = "Error loading entries.";
+      }
+    }
+
+    function searchEntries() {
+      const query = document.getElementById("searchBox").value.trim().toLowerCase();
+      const table = document.getElementById("resultsTable");
+      const tbody = table.querySelector("tbody");
+      const info = document.getElementById("resultsInfo");
+
+      tbody.innerHTML = "";
+
+      if (!query) {
+        info.textContent = "Please enter a word or phrase to search.";
+        table.style.display = "none";
+        return;
+      }
+
+      const results = allEntries.filter(e =>
+        e.title.toLowerCase().includes(query) ||
+        e.entry.toLowerCase().includes(query)
+      );
+
+      if (results.length === 0) {
+        info.textContent = `No entries found for "${query}".`;
+        table.style.display = "none";
+        return;
+      }
+
+      info.textContent = `${results.length} entr${results.length === 1 ? "y" : "ies"} found for "${query}":`;
+
+      results.forEach(entry => {
+        const tr = document.createElement("tr");
+
+        const formattedDate = new Date(entry.date).toLocaleDateString(undefined, {
+          weekday: "short", year: "numeric", month: "short", day: "numeric"
+        });
+
+        const excerpt = entry.entry.length > 120
+          ? entry.entry.substring(0, 120) + "..."
+          : entry.entry || "<em>No content</em>";
+
+        tr.innerHTML = `
+          <td>${formattedDate}</td>
+          <td>${entry.title}</td>
+          <td>${excerpt}</td>
+          <td><span class="${entry.unfinished ? "unfinished" : "finished"}">
+            ${entry.unfinished ? "Unfinished" : "Complete"}
+          </span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      table.style.display = "table";
+    }
+
+    window.onload = () => {
+      gapiLoaded();
+      gisLoaded();
+    };
+  </script>
+</body>
+</html>
