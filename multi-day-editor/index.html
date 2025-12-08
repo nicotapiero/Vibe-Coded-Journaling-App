@@ -361,29 +361,47 @@
       ------------------------------------------*/
       function toggleMultiMode() {
         const isMulti = document.getElementById("multiModeToggle").checked;
-
-        // Show/Hide multi UI
+      
+        // Show/Hide multi-day UI
         document.getElementById("multiDayOptions").style.display = isMulti ? "block" : "none";
         document.getElementById("multiDayContainer").style.display = isMulti ? "block" : "none";
-
-        // Hide single-day UI
-        const ids = [
+      
+        // Elements to hide (inputs + their labels)
+        const elementsToHide = [
           "datePicker",
-          "weekdayDisplay",
           "title",
           "journalEntry",
           "saveButton",
+          "weekdayDisplay",
         ];
-
-        ids.forEach((id) => {
-          document.getElementById(id).style.display = isMulti ? "none" : "block";
+      
+        // Hide/show labels that were missed earlier
+        const labelIDs = [
+          'datePicker',   // <label for="datePicker">
+          'title',        // <label for="title">
+          'unfinishedCheckbox', // label's parent needs hiding separately
+        ];
+      
+        // Hide inputs
+        elementsToHide.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = isMulti ? "none" : "block";
         });
-
+      
+        // Hide labels
+        labelIDs.forEach(id => {
+          const label = document.querySelector(`label[for="${id}"]`);
+          if (label) label.style.display = isMulti ? "none" : "inline-block";
+        });
+      
+        // Hide the unfinished checkbox wrapper
         document.getElementById("unfinishedCheckbox").parentElement.style.display =
           isMulti ? "none" : "block";
-
+      
+        // Return to single day mode → reload entry
         if (!isMulti) loadEntry();
       }
+
 
       function loadMultipleDays() {
         const count = Number(document.getElementById("multiDayCount").value);
