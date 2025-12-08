@@ -362,46 +362,38 @@
       function toggleMultiMode() {
         const isMulti = document.getElementById("multiModeToggle").checked;
       
-        // Show/Hide multi-day UI
+        // Show/Hide multi UI
         document.getElementById("multiDayOptions").style.display = isMulti ? "block" : "none";
         document.getElementById("multiDayContainer").style.display = isMulti ? "block" : "none";
       
-        // Elements to hide (inputs + their labels)
-        const elementsToHide = [
+        // Elements to hide (inputs + dynamic blocks)
+        const hideIDs = [
           "datePicker",
           "title",
           "journalEntry",
           "saveButton",
-          "weekdayDisplay",
+          "weekdayDisplay"
         ];
       
-        // Hide/show labels that were missed earlier
-        const labelIDs = [
-          'datePicker',   // <label for="datePicker">
-          'title',        // <label for="title">
-          'unfinishedCheckbox', // label's parent needs hiding separately
-        ];
-      
-        // Hide inputs
-        elementsToHide.forEach(id => {
+        hideIDs.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = isMulti ? "none" : "block";
         });
       
-        // Hide labels
-        labelIDs.forEach(id => {
-          const label = document.querySelector(`label[for="${id}"]`);
-          if (label) label.style.display = isMulti ? "none" : "inline-block";
+        // Hide their LABELS (this is the correct + reliable approach)
+        document.querySelectorAll("label[for]").forEach(label => {
+          const target = label.getAttribute("for");
+          if (hideIDs.includes(target)) {
+            label.style.display = isMulti ? "none" : "inline-block";
+          }
         });
       
-        // Hide the unfinished checkbox wrapper
+        // Hide checkbox block
         document.getElementById("unfinishedCheckbox").parentElement.style.display =
           isMulti ? "none" : "block";
       
-        // Return to single day mode → reload entry
         if (!isMulti) loadEntry();
       }
-
 
       function loadMultipleDays() {
         const count = Number(document.getElementById("multiDayCount").value);
