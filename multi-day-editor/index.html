@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Journal</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+
+      input[type="date"],
+      input[type="text"],
+      textarea,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 16px;
+        border: 1px solid #000;
+      }
+
+      textarea {
+        height: 200px;
+        resize: none;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      label[for="unfinishedCheckbox"] {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 16px;
+      }
+
+      footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+      }
+
+      #weekdayDisplay {
+        margin-top: 5px;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      #autosaveStatus {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+        min-height: 20px;
+        font-style: italic;
+      }
+
+      .dayBlock {
+        border: 1px solid #000;
+        padding: 15px;
+        margin-top: 15px;
+        text-align: left;
+      }
+
+      @media (max-width: 600px) {
+        textarea {
+          height: 300px;
+        }
+      }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+
+  <body>
+    <h1>Daily Journal</h1>
+
+    <!-- MULTI-DAY MODE TOGGLE -->
+    <label>
+      <input type="checkbox" id="multiModeToggle" />
+      Edit Multiple Days
+    </label>
+
+    <div id="multiDayOptions" style="display:none; margin-top:10px;">
+      <label>Select number of days (1–7):</label>
+      <input type="number" id="multiDayCount" min="1" max="7" value="3" />
+      <button id="loadMultiButton">Load Multiple Days</button>
+    </div>
+
+    <div id="multiDayContainer" style="display:none;"></div>
+
+    <hr style="margin:20px 0;" />
+
+    <!-- SINGLE-DAY MODE -->
+    <label for="datePicker">Pick a date:</label>
+    <input type="date" id="datePicker" />
+    <div id="weekdayDisplay"></div><br />
+
+    <label for="title">Title:</label>
+    <input type="text" id="title" placeholder="Enter the title of your journal entry" /><br />
+
+    <textarea id="journalEntry" placeholder="Write your entry..."></textarea>
+    <div id="autosaveStatus"></div><br />
+
+    <label for="unfinishedCheckbox">
+      <input type="checkbox" id="unfinishedCheckbox" />
+      Mark as Unfinished
+    </label><br />
+
+    <button id="saveButton">Save</button>
+
+    <script>
+      /* -----------------------------
+           ORIGINAL VARIABLES
+      ------------------------------*/
+      const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
+      const RANGE = "Sheet1!A:D";
+      const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
+      const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+      let gapiInited = false;
+      let tokenClient;
+      let journalData = [];
+
+      let originalTitle = "";
+      let originalEntry = "";
+      let originalUnfinished = false;
+
+      // Autosave
+      let autosaveTimeout;
+      const AUTOSAVE_DELAY = 1500;
+
+      /* -----------------------------
+            MULTI-DAY EVENTS
+      ------------------------------*/
+      document.getElementById("multiModeToggle").addEventListener("change", toggleMultiMode);
+      document.getElementById("loadMultiButton").addEventListener("click", loadMultipleDays);
+
+      /* -----------------------------
+            SINGLE-DAY EVENTS
+      ------------------------------*/
+      document.getElementById("datePicker").addEventListener("change", function () {
+        updateWeekday();
+        loadEntry();
+      });
+      document.getElementById("saveButton").addEventListener("click", saveEntry);
+
+      document.getElementById("title").addEventListener("input", handleInput);
+      document.getElementById("journalEntry").addEventListener("input", handleInput);
+      document.getElementById("unfinishedCheckbox").addEventListener("change", handleInput);
+
+      /* -----------------------------
+           BASIC FUNCTIONS (unchanged)
+      ------------------------------*/
+      function handleInput() {
+        clearTimeout(autosaveTimeout);
+        document.getElementById("autosaveStatus").textContent = "";
+        autosaveTimeout = setTimeout(() => performAutosave(), AUTOSAVE_DELAY);
+      }
+
+      async function performAutosave() {
+        if (!checkUnsavedChanges()) return;
+
+        const selectedDate = document.getElementById("datePicker").value;
+        if (!selectedDate) return;
+
+        const rowIndex = journalData.findIndex((r) => r[0] === selectedDate);
+        if (rowIndex === -1) {
+          document.getElementById("autosaveStatus").textContent =
+            "New entry - use Save button to create";
+          return;
+        }
+
+        try {
+          const titleText = document.getElementById("title").value;
+          const newText = document.getElementById("journalEntry").value;
+          const unfinished = document.getElementById("unfinishedCheckbox").checked;
+
+          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+
+          await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range,
+            valueInputOption: "RAW",
+            resource: {
+              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+            },
+          });
+
+          journalData[rowIndex][1] = titleText;
+          journalData[rowIndex][2] = newText;
+          journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+
+          originalTitle = titleText;
+          originalEntry = newText;
+          originalUnfinished = unfinished;
+
+          const now = new Date();
+          const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          document.getElementById("autosaveStatus").textContent = `Autosaved at ${timeString}`;
+        } catch (err) {
+          document.getElementById("autosaveStatus").textContent = "Autosave failed";
+        }
+      }
+
+      function updateWeekday() {
+        const selected = document.getElementById("datePicker").value;
+        if (!selected) return;
+
+        const [y, m, d] = selected.split("-").map(Number);
+        const date = new Date(y, m - 1, d);
+
+        const weekdays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        document.getElementById("weekdayDisplay").textContent = weekdays[date.getDay()];
+      }
+
+      /* -----------------------------------------
+                GOOGLE API INITIALIZATION
+      ------------------------------------------*/
+      function gapiLoaded() {
+        gapi.load("client", initializeGapiClient);
+      }
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: () => {
+            loadDates();
+          },
+        });
+        maybeEnableButtons();
+      }
+      function maybeEnableButtons() {
+        if (gapiInited && tokenClient) tokenClient.requestAccessToken();
+      }
+
+      async function loadDates() {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: RANGE,
+        });
+        journalData = res.result.values || [];
+        autoSelectToday();
+      }
+
+      /* -----------------------------------------
+                  SINGLE DAY LOADING
+      ------------------------------------------*/
+      function autoSelectToday() {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        const tStr = today.toISOString().split("T")[0];
+        const yStr = yesterday.toISOString().split("T")[0];
+
+        const yEntry = journalData.find((r) => r[0] === yStr);
+        const unfinished = yEntry && yEntry[3] === "TRUE";
+        const blank = !yEntry || !yEntry[2] || yEntry[2].trim() === "";
+
+        document.getElementById("datePicker").value =
+          unfinished || blank ? yStr : tStr;
+
+        updateWeekday();
+        loadEntry();
+      }
+
+      function loadEntry() {
+        if (checkUnsavedChanges()) {
+          if (!window.confirm("You have unsaved changes. Continue?")) return;
+        }
+
+        clearTimeout(autosaveTimeout);
+        document.getElementById("autosaveStatus").textContent = "";
+
+        const date = document.getElementById("datePicker").value;
+        const row = journalData.find((r) => r[0] === date);
+
+        originalTitle = row ? row[1] || "" : "";
+        originalEntry = row ? row[2] || "" : "";
+        originalUnfinished = row && row[3] === "TRUE";
+
+        document.getElementById("title").value = originalTitle;
+        document.getElementById("journalEntry").value = originalEntry;
+        document.getElementById("unfinishedCheckbox").checked = originalUnfinished;
+      }
+
+      async function saveEntry() {
+        clearTimeout(autosaveTimeout);
+
+        const date = document.getElementById("datePicker").value;
+        const titleText = document.getElementById("title").value;
+        const newText = document.getElementById("journalEntry").value;
+        const unfinished = document.getElementById("unfinishedCheckbox").checked;
+
+        const rowIndex = journalData.findIndex((r) => r[0] === date);
+        if (rowIndex === -1) {
+          alert("Can't create new entries via Save. Create manually in Sheet.");
+          return;
+        }
+
+        try {
+          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+          const ret = await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range,
+            valueInputOption: "RAW",
+            resource: {
+              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+            },
+          });
+
+          journalData[rowIndex][1] = titleText;
+          journalData[rowIndex][2] = newText;
+          journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+
+          originalTitle = titleText;
+          originalEntry = newText;
+          originalUnfinished = unfinished;
+
+          alert(`Saved! (response status: ${ret?.status})`);
+        } catch (err) {
+          alert(`ERROR: ${JSON.stringify(err)}`);
+        }
+      }
+
+      function checkUnsavedChanges() {
+        return (
+          document.getElementById("title").value !== originalTitle ||
+          document.getElementById("journalEntry").value !== originalEntry ||
+          document.getElementById("unfinishedCheckbox").checked !== originalUnfinished
+        );
+      }
+
+      /* -----------------------------------------
+                  MULTI-DAY MODE
+      ------------------------------------------*/
+      function toggleMultiMode() {
+        const isMulti = document.getElementById("multiModeToggle").checked;
+
+        // Show/Hide multi UI
+        document.getElementById("multiDayOptions").style.display = isMulti ? "block" : "none";
+        document.getElementById("multiDayContainer").style.display = isMulti ? "block" : "none";
+
+        // Hide single-day UI
+        const ids = [
+          "datePicker",
+          "weekdayDisplay",
+          "title",
+          "journalEntry",
+          "saveButton",
+        ];
+
+        ids.forEach((id) => {
+          document.getElementById(id).style.display = isMulti ? "none" : "block";
+        });
+
+        document.getElementById("unfinishedCheckbox").parentElement.style.display =
+          isMulti ? "none" : "block";
+
+        if (!isMulti) loadEntry();
+      }
+
+      function loadMultipleDays() {
+        const count = Number(document.getElementById("multiDayCount").value);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const container = document.getElementById("multiDayContainer");
+        container.innerHTML = "";
+
+        for (let i = 0; i < count; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+
+          const entry = journalData.find((r) => r[0] === dateStr);
+          const title = entry ? entry[1] || "" : "";
+          const text = entry ? entry[2] || "" : "";
+          const unfinished = entry && entry[3] === "TRUE";
+
+          const block = document.createElement("div");
+          block.className = "dayBlock";
+          block.innerHTML = `
+            <h3>${dateStr}</h3>
+            <label>Title:</label>
+            <input type="text" class="multiTitle" data-date="${dateStr}" value="${title}">
+            <label>Entry:</label>
+            <textarea class="multiText" data-date="${dateStr}">${text}</textarea>
+            <label>
+              <input type="checkbox" class="multiCheck" data-date="${dateStr}" ${unfinished ? "checked" : ""}>
+              Unfinished
+            </label>
+          `;
+
+          container.appendChild(block);
+        }
+
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Save All";
+        saveBtn.style = "margin-top:20px;";
+        saveBtn.onclick = saveAllMultiEntries;
+
+        container.appendChild(saveBtn);
+      }
+
+      async function saveAllMultiEntries() {
+        const titles = document.querySelectorAll(".multiTitle");
+        const texts = document.querySelectorAll(".multiText");
+        const checks = document.querySelectorAll(".multiCheck");
+
+        const updates = [];
+
+        titles.forEach((titleEl, i) => {
+          const date = titleEl.dataset.date;
+          const rowIndex = journalData.findIndex((r) => r[0] === date);
+          if (rowIndex === -1) return;
+
+          updates.push({
+            range: `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`,
+            values: [[
+              titleEl.value,
+              texts[i].value,
+              checks[i].checked ? "TRUE" : "FALSE",
+            ]],
+          });
+        });
+
+        if (updates.length === 0) {
+          alert("No entries to update.");
+          return;
+        }
+
+        try {
+          await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SHEET_ID,
+            resource: {
+              valueInputOption: "RAW",
+              data: updates,
+            },
+          });
+
+          updates.forEach((u) => {
+            const rowIndex = Number(u.range.match(/B(\d+)/)[1]) - 1;
+            journalData[rowIndex][1] = u.values[0][0];
+            journalData[rowIndex][2] = u.values[0][1];
+            journalData[rowIndex][3] = u.values[0][2];
+          });
+
+          alert("All entries saved!");
+        } catch (err) {
+          alert("ERROR: " + JSON.stringify(err));
+        }
+      }
+
+      /* -----------------------------------------
+              UNSAVED CHANGE PROTECTION
+      ------------------------------------------*/
+      window.addEventListener("beforeunload", (event) => {
+        if (!document.getElementById("multiModeToggle").checked) {
+          if (!checkUnsavedChanges()) return;
+        }
+        event.returnValue = "Unsaved changes.";
+      });
+
+      window.onload = () => {
+        gapiLoaded();
+        gisLoaded();
+      };
+    </script>
+
+    <footer>
+      <a href="./read">Read</a>
+      <a href="./status">Status</a>
+    </footer>
+  </body>
+</html>
