@@ -129,7 +129,10 @@
         });
 
         const data = res.result.values || [];
-         const tbody = document.querySelector("#unfinishedTable tbody");
+        const tbody = document.querySelector("#unfinishedTable tbody");
+
+        // 🔴 Clear existing rows before repopulating
+        tbody.innerHTML = "";
 
         // Convert spreadsheet rows into a map for quick lookup
         const entriesMap = new Map();
