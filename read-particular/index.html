@@ -33,11 +33,11 @@
       tr:nth-child(even) {
         background-color: #fafafa;
       }
-      
+
       .unfinished {
         background-color: #EA526F;
       }
-      
+
       .finished {
         background-color: #629677;
       }
@@ -48,20 +48,29 @@
   </head>
   <body>
     <h1>Journal Reader</h1>
-    
-    <label for="entrySelector">Select a Journal Entry:</label>
+
+    <!-- Sheet Selector -->
+    <label for="sheetSelector">Select Year:</label><br>
+    <select id="sheetSelector" onchange="loadEntriesForSelectedSheet()">
+      <option value="">Loading sheets...</option>
+    </select>
+
+    <br><br>
+
+    <!-- Entry Selector -->
+    <label for="entrySelector">Select a Journal Entry:</label><br>
     <select id="entrySelector" onchange="displaySelectedEntry()">
       <option value="">Choose an entry...</option>
     </select>
-    
+
     <div>
       <button onclick="jumpToToday()">Today</button>
       <button onclick="navigateDay(-1)">← Previous Day</button>
       <button onclick="navigateDay(1)">Next Day →</button>
     </div>
-    
-    <div id="entryCount"></div>
 
+    <div id="entryCount"></div>
+    
     <div id="loadingMessage">Loading your journal entries...</div>
 
     <div id="noSelection" style="display: none;">
@@ -78,13 +87,14 @@
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
-      const RANGE = "Sheet1!A:D";
+      const RANGE_COLUMNS = "A:D";
       const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
       const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
       let gapiInited = false;
       let tokenClient;
       let allEntries = [];
+      let currentSheet = "";
 
       function gapiLoaded() {
         gapi.load("client", initializeGapiClient);
@@ -104,7 +114,7 @@
           scope: SCOPES,
           callback: (tokenResponse) => {
             gapi.client.setToken(tokenResponse);
-            loadAllEntries();
+            loadSheetNames();
           },
         });
         maybeEnableButtons();
@@ -116,14 +126,39 @@
         }
       }
 
-      async function loadAllEntries() {
-        try {
-          const res = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: RANGE,
-          });
+      async function loadSheetNames() {
+        const res = await gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: SHEET_ID,
+        });
 
-          const data = res.result.values || [];
+        const selector = document.getElementById("sheetSelector");
+        selector.innerHTML = "";
+
+        res.result.sheets.forEach(sheet => {
+          const name = sheet.properties.title;
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          selector.appendChild(option);
+        });
+
+        currentSheet = selector.value;
+        loadEntriesForSelectedSheet();
+      }
+
+      async function loadEntriesForSelectedSheet() {
+        currentSheet = document.getElementById("sheetSelector").value;
+        if (!currentSheet) return;
+
+        document.getElementById("loadingMessage").style.display = "block";
+        document.getElementById("entryDisplay").style.display = "none";
+
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: `${currentSheet}!${RANGE_COLUMNS}`,
+        });
+
+        const data = res.result.values || [];
           allEntries = data.filter(row => row[0]) // Filter out empty rows
             .map(row => ({
               date: row[0],
