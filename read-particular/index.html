@@ -153,24 +153,25 @@
         document.getElementById("loadingMessage").style.display = "block";
         document.getElementById("entryDisplay").style.display = "none";
 
-        const res = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: `${currentSheet}!${RANGE_COLUMNS}`,
-        });
-
-        const data = res.result.values || [];
-          allEntries = data.filter(row => row[0]) // Filter out empty rows
-            .map(row => ({
-              date: row[0],
-              title: row[1] || "Untitled Entry",
-              entry: row[2] || "No content available",
-              unfinished: row[3] && row[3].toUpperCase() === "TRUE"
-            }))
-            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort oldest first (chronological)
-
-          populateDropdown();
-          document.getElementById('loadingMessage').style.display = 'none';
-          document.getElementById('noSelection').style.display = 'block';
+        try {
+          const res = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: `${currentSheet}!${RANGE_COLUMNS}`,
+          });
+  
+          const data = res.result.values || [];
+            allEntries = data.filter(row => row[0]) // Filter out empty rows
+              .map(row => ({
+                date: row[0],
+                title: row[1] || "Untitled Entry",
+                entry: row[2] || "No content available",
+                unfinished: row[3] && row[3].toUpperCase() === "TRUE"
+              }))
+              .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort oldest first (chronological)
+  
+            populateDropdown();
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('noSelection').style.display = 'block';
           
         } catch (error) {
           console.error('Error loading entries:', error);
