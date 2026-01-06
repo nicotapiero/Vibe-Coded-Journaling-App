@@ -122,7 +122,7 @@
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA"; // 🔁 Replace with your actual Sheet ID
-      const RANGE = "Sheet1!A:D"; // Update range to include the new Title column
+      const RANGE = "2026!A:D"; // Update range to include the new Title column
       const CLIENT_ID =
         "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com"; // 🔁 Replace with your OAuth 2.0 Client ID
       const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
@@ -193,7 +193,7 @@
           const unfinished = document.getElementById("unfinishedCheckbox").checked;
 
           // Perform the save
-          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+          const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
             range: range,
@@ -370,7 +370,7 @@
             throw new Error("Error: entry column doesnt exist");
           } else {
             // Updating an existing entry in the sheet
-            const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+            const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
             ret = await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
               range: range,
