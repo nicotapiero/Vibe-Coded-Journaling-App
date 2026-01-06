@@ -163,7 +163,7 @@
             allEntries = data.filter(row => row[0]) // Filter out empty rows
               .map(row => ({
                 date: row[0],
-                title: row[1] || "Untitled Entry",
+                title: row[1] || "", // what to name untitled entries
                 entry: row[2] || "No content available",
                 unfinished: row[3] && row[3].toUpperCase() === "TRUE"
               }))
