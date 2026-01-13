@@ -131,7 +131,7 @@
            ORIGINAL VARIABLES
       ------------------------------*/
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
-      const RANGE = "Sheet1!A:D";
+      const RANGE = "2026!A:D";
       const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
       const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
@@ -193,7 +193,7 @@
           const newText = document.getElementById("journalEntry").value;
           const unfinished = document.getElementById("unfinishedCheckbox").checked;
 
-          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+          const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
 
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
@@ -325,7 +325,7 @@
         }
 
         try {
-          const range = `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`;
+          const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
           const ret = await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
             range,
@@ -452,7 +452,7 @@
           if (rowIndex === -1) return;
 
           updates.push({
-            range: `Sheet1!B${rowIndex + 1}:D${rowIndex + 1}`,
+            range: `2026!B${rowIndex + 1}:D${rowIndex + 1}`,
             values: [[
               titleEl.value,
               texts[i].value,
