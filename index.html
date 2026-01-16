@@ -22,6 +22,36 @@
         margin-bottom: 20px;
       }
 
+      .date-picker-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .nav-button {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        margin: 0;
+        font-size: 20px;
+        border: 1px solid #000;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-button:hover {
+        background: #f0f0f0;
+      }
+
+      .nav-button:active {
+        background: #e0e0e0;
+      }
+
       input[type="date"],
       input[type="text"],
       textarea,
@@ -31,6 +61,11 @@
         margin-top: 10px;
         font-size: 16px;
         border: 1px solid #000;
+      }
+
+      input[type="date"] {
+        flex: 1;
+        margin: 0;
       }
 
       textarea {
@@ -100,7 +135,11 @@
     <h1>Daily Journal</h1>
 
     <label for="datePicker">Pick a date:</label>
-    <input type="date" id="datePicker" />
+    <div class="date-picker-container">
+      <button class="nav-button" id="prevDay" title="Previous day">←</button>
+      <input type="date" id="datePicker" />
+      <button class="nav-button" id="nextDay" title="Next day">→</button>
+    </div>
     <div id="weekdayDisplay"></div><br />
 
     <label for="title">Title:</label>
@@ -151,10 +190,40 @@
         .getElementById("saveButton")
         .addEventListener("click", saveEntry);
 
+      // Navigation button event listeners
+      document.getElementById("prevDay").addEventListener("click", function() {
+        navigateDay(-1);
+      });
+      
+      document.getElementById("nextDay").addEventListener("click", function() {
+        navigateDay(1);
+      });
+
       // Add autosave event listeners
       document.getElementById("title").addEventListener("input", handleInput);
       document.getElementById("journalEntry").addEventListener("input", handleInput);
       document.getElementById("unfinishedCheckbox").addEventListener("change", handleInput);
+
+      function navigateDay(offset) {
+        const datePicker = document.getElementById("datePicker");
+        const currentDate = datePicker.value;
+        
+        if (!currentDate) return;
+        
+        // Parse the current date
+        const [year, month, day] = currentDate.split("-").map(Number);
+        const date = new Date(year, month - 1, day);
+        
+        // Add or subtract days
+        date.setDate(date.getDate() + offset);
+        
+        // Format back to YYYY-MM-DD
+        const newDateStr = date.toISOString().split("T")[0];
+        
+        datePicker.value = newDateStr;
+        updateWeekday();
+        loadEntry();
+      }
 
       function handleInput() {
         clearTimeout(autosaveTimeout);
