@@ -508,6 +508,13 @@
       });
 
       window.onload = () => {
+        // Clear any browser-restored form state before auth loads
+        document.getElementById("datePicker").value = "";
+        document.getElementById("title").value = "";
+        document.getElementById("journalEntry").value = "";
+        document.getElementById("unfinishedCheckbox").checked = false;
+        document.getElementById("weekdayDisplay").textContent = "";
+        
         gapiLoaded();
         gisLoaded();
       };
