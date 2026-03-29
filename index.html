@@ -209,6 +209,13 @@
         const currentDate = datePicker.value;
         
         if (!currentDate) return;
+
+        // Check for unsaved changes BEFORE changing the date
+        if (checkUnsavedChanges()) {
+          if (!window.confirm("You have unsaved changes. Are you sure you want to take this action?")) {
+            return; // Abort — date picker is unchanged, autosave will still target current day
+          }
+        }
         
         // Parse the current date
         const [year, month, day] = currentDate.split("-").map(Number);
@@ -385,11 +392,7 @@
       }
 
       function loadEntry() {
-        if (checkUnsavedChanges()) {
-          if (!window.confirm("You have unsaved changes. Are you sure you want to take this action?")) {
-            return;
-          }
-        }
+        // No unsaved-changes guard here — callers (navigateDay, datePicker change) are responsible for checking first
 
         // Clear any pending autosave when loading a new entry
         clearTimeout(autosaveTimeout);
