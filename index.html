@@ -254,12 +254,6 @@
       document.getElementById("journalEntry").addEventListener("input", handleInput);
       document.getElementById("unfinishedCheckbox").addEventListener("change", handleInput);
 
-      // Dark mode toggle
-      document.getElementById("darkModeToggle").addEventListener("click", function() {
-        const isDark = document.body.classList.toggle("dark-mode");
-        this.textContent = isDark ? "Light Mode" : "Dark Mode";
-      });
-
           function navigateDay(offset) {
         const datePicker = document.getElementById("datePicker");
         const currentDate = datePicker.value;
@@ -570,6 +564,12 @@
         document.getElementById("journalEntry").value = "";
         document.getElementById("unfinishedCheckbox").checked = false;
         document.getElementById("weekdayDisplay").textContent = "";
+
+        // Dark mode toggle
+        document.getElementById("darkModeToggle").addEventListener("click", function() {
+          const isDark = document.body.classList.toggle("dark-mode");
+          this.textContent = isDark ? "Light Mode" : "Dark Mode";
+        });
         
         gapiLoaded();
         gisLoaded();
