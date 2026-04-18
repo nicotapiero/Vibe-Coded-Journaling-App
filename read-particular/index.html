@@ -41,6 +41,14 @@
       .finished {
         background-color: #629677;
       }
+
+      .end-marker {
+        text-align: center;
+        margin-top: 30px;
+        color: #888;
+        font-size: 20px;
+        user-select: none;
+      }
     </style>
 
     <script src="https://apis.google.com/js/api.js"></script>
@@ -238,8 +246,9 @@
         
         // Format the entry content - convert line breaks to paragraphs
         const formattedContent = entry.entry.replace(/\n/g, "<br>");
+        const contentWithEndMarker = formattedContent + '<div class="end-marker">⁂</div>';
         
-        document.getElementById('entryContent').innerHTML = formattedContent || '<em>No content available for this entry.</em>';
+        document.getElementById('entryContent').innerHTML = formattedContent ? contentWithEndMarker : '<em>No content available for this entry.</em>';
         
         const statusElement = document.getElementById('entryStatus');
         if (entry.unfinished) {
