@@ -304,6 +304,24 @@
         }
       }
 
+      document.addEventListener('keydown', (e) => {
+        // Ignore key presses when user is typing in a select/input
+        const activeTag = document.activeElement.tagName.toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+          return;
+        }
+      
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navigateDay(-1);
+        }
+      
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          navigateDay(1);
+        }
+      });
+
       window.onload = () => {
         gapiLoaded();
         gisLoaded();
