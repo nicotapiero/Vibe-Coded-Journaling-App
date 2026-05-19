@@ -211,7 +211,7 @@
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA"; // 🔁 Replace with your actual Sheet ID
-      const RANGE = "2026!A:D"; // Update range to include the new Title column
+      const RANGE = "2026!A:E"; // Update range to include the new Title column
       const CLIENT_ID =
         "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com"; // 🔁 Replace with your OAuth 2.0 Client ID
       const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
@@ -317,15 +317,16 @@
           const titleText = document.getElementById("title").value;
           const newText = document.getElementById("journalEntry").value;
           const unfinished = document.getElementById("unfinishedCheckbox").checked;
+          const timestamp = new Date().toISOString();
 
           // Perform the save
-          const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
+          const range = `2026!B${rowIndex + 1}:E${rowIndex + 1}`;
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
             range: range,
             valueInputOption: "RAW",
             resource: {
-              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE", timestamp]],
             },
           });
 
@@ -333,6 +334,7 @@
           journalData[rowIndex][1] = titleText;
           journalData[rowIndex][2] = newText;
           journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+          journalData[rowIndex][4] = timestamp;
 
           // Update original values
           originalTitle = titleText;
@@ -472,6 +474,7 @@
         const newText = document.getElementById("journalEntry").value;
         const unfinished =
           document.getElementById("unfinishedCheckbox").checked;
+        const timestamp = new Date().toISOString();
 
         if (!selectedDate) return;
 
@@ -482,7 +485,8 @@
           selectedDate,
           titleText,
           newText,
-          unfinished
+          unfinished,
+          timestamp
         );
 
         let ret = undefined;
@@ -492,18 +496,19 @@
             throw new Error("Error: entry column doesnt exist");
           } else {
             // Updating an existing entry in the sheet
-            const range = `2026!B${rowIndex + 1}:D${rowIndex + 1}`;
+            const range = `2026!B${rowIndex + 1}:E${rowIndex + 1}`;
             ret = await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
               range: range,
               valueInputOption: "RAW",
               resource: {
-                values: [[titleText, newText, unfinished ? "TRUE" : "FALSE"]],
+                values: [[titleText, newText, unfinished ? "TRUE" : "FALSE", timestamp]],
               },
             });
             journalData[rowIndex][1] = titleText;
             journalData[rowIndex][2] = newText;
             journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+            journalData[rowIndex][4] = timestamp;
           }
 
           // Update the original values to reflect the current state
