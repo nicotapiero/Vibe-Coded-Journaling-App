@@ -65,6 +65,7 @@
         <tr>
           <th>Date</th>
           <th>Title</th>
+          <th>Last Edited</th>
           <th>Entry</th>
         </tr>
       </thead>
@@ -73,7 +74,7 @@
 
     <script>
       const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
-      const RANGE = "2026!A:D";
+      const RANGE = "2026!A:E";
       const CLIENT_ID =
         "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
       const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
@@ -107,6 +108,20 @@
           },
         });
         maybeEnableButtons();
+      }
+
+      function formatLocalTimestamp(timestamp) {
+        if (!timestamp) return "(Never)";
+      
+        const date = new Date(timestamp);
+      
+        return date.toLocaleString([], {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
       }
 
       function maybeEnableButtons() {
@@ -220,9 +235,12 @@
               });
             }
 
+            const lastEdited = row?.[4] || "";
+
             tr.innerHTML = `
               <td>${formatDateWithWeekday(date)}</td>
               <td>${row?.[1] || "(No title)"}</td>
+              <td>${formatLocalTimestamp(lastEdited)}</td>
             `;
             tr.appendChild(tdEntry);
             tbody.appendChild(tr);
