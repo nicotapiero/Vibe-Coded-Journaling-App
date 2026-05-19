@@ -296,6 +296,31 @@
         }, AUTOSAVE_DELAY);
       }
 
+      async function writeEntryToSheet(rowIndex, titleText, newText, unfinished) {
+        const timestamp = new Date().toISOString();
+        const range = `2026!B${rowIndex + 1}:E${rowIndex + 1}`;
+      
+        const ret = await gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: range,
+          valueInputOption: "RAW",
+          resource: {
+            values: [[titleText, newText, unfinished ? "TRUE" : "FALSE", timestamp]],
+          },
+        });
+      
+        journalData[rowIndex][1] = titleText;
+        journalData[rowIndex][2] = newText;
+        journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
+        journalData[rowIndex][4] = timestamp;
+      
+        originalTitle = titleText;
+        originalEntry = newText;
+        originalUnfinished = unfinished;
+      
+        return ret;
+      }
+      
       async function performAutosave() {
         // Only autosave if there are actual changes
         if (!checkUnsavedChanges()) {
@@ -317,29 +342,8 @@
           const titleText = document.getElementById("title").value;
           const newText = document.getElementById("journalEntry").value;
           const unfinished = document.getElementById("unfinishedCheckbox").checked;
-          const timestamp = new Date().toISOString();
-
-          // Perform the save
-          const range = `2026!B${rowIndex + 1}:E${rowIndex + 1}`;
-          await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: range,
-            valueInputOption: "RAW",
-            resource: {
-              values: [[titleText, newText, unfinished ? "TRUE" : "FALSE", timestamp]],
-            },
-          });
-
-          // Update local data
-          journalData[rowIndex][1] = titleText;
-          journalData[rowIndex][2] = newText;
-          journalData[rowIndex][3] = unfinished ? "TRUE" : "FALSE";
-          journalData[rowIndex][4] = timestamp;
-
-          // Update original values
-          originalTitle = titleText;
-          originalEntry = newText;
-          originalUnfinished = unfinished;
+      
+          await writeEntryToSheet(rowIndex, titleText, newText, unfinished);
 
           // Show autosave confirmation
           const now = new Date();
