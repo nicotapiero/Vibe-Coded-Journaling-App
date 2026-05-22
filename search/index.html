@@ -302,6 +302,11 @@
       document.getElementById("popup").style.display = "none";
     }
 
+    function parseLocalDate(dateString) {
+      const [year, month, day] = dateString.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
     window.onclick = function(event) {
       const popup = document.getElementById("popup");
       if (event.target === popup) closePopup();
