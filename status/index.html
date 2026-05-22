@@ -60,6 +60,9 @@
   <body>
     <h1>Unfinished Journal Entries (last 90 days)</h1>
     <button id="refreshBtn" onClick="loadUnfinishedEntries()">Refresh</button>
+    <span style="margin-left: 10px; color: #666; font-size: 0.9em;">
+      Press <strong>R</strong> to refresh
+    </span>
     <table id="unfinishedTable">
       <thead>
         <tr>
@@ -255,10 +258,21 @@
         }
       }
 
+      
+
       window.onload = () => {
         gapiLoaded();
         gisLoaded();
       };
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key.toLowerCase() === "r") {
+          event.preventDefault();
+          loadUnfinishedEntries();
+        }
+      });
+
+      
     </script>
   </body>
 </html>
