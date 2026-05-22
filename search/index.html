@@ -99,6 +99,7 @@
     <thead>
       <tr>
         <th>Date</th>
+        <th>Year</th>
         <th>Title</th>
         <th>Excerpt</th>
         <th>Status</th>
@@ -112,6 +113,7 @@
     <div id="popupContent">
       <span id="popupClose" onclick="closePopup()">✖</span>
       <h2 id="popupTitle"></h2>
+      <p><strong>Sheet:</strong> <span id="popupSheet"></span></p>
       <p><strong>Date:</strong> <span id="popupDate"></span></p>
       <p><strong>Status:</strong> <span id="popupStatus"></span></p>
       <hr>
@@ -121,7 +123,7 @@
 
   <script>
     const SHEET_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
-    const RANGE = "Sheet1!A:D";
+    const SHEETS = ["Sheet1", "2026"];
     const CLIENT_ID = "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
     const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
@@ -162,25 +164,43 @@
 
     async function loadAllEntries() {
       try {
-        const res = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: RANGE,
+        const requests = SHEETS.map(sheet =>
+          gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: `${sheet}!A:D`,
+          })
+        );
+    
+        const responses = await Promise.all(requests);
+    
+        allEntries = [];
+    
+        responses.forEach((res, index) => {
+          const sheetName = SHEETS[index];
+          const data = res.result.values || [];
+    
+          const entries = data
+            .filter(row => row[0])
+            .map(row => ({
+              sheet: sheetName,
+              date: row[0],
+              title: row[1] || "Untitled Entry",
+              entry: row[2] || "",
+              unfinished: row[3] && row[3].toUpperCase() === "TRUE"
+            }));
+    
+          allEntries.push(...entries);
         });
-
-        const data = res.result.values || [];
-        allEntries = data.filter(row => row[0])
-          .map(row => ({
-            date: row[0],
-            title: row[1] || "Untitled Entry",
-            entry: row[2] || "",
-            unfinished: row[3] && row[3].toUpperCase() === "TRUE"
-          }))
-          .sort((a, b) => new Date(b.date) - new Date(a.date)); // newest first
-
+    
+        // Sort newest first
+        allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
         document.getElementById("loadingMessage").style.display = "none";
+    
       } catch (err) {
         console.error("Error loading entries:", err);
-        document.getElementById("loadingMessage").textContent = "Error loading entries.";
+        document.getElementById("loadingMessage").textContent =
+          "Error loading entries.";
       }
     }
 
@@ -223,6 +243,7 @@
 
         tr.innerHTML = `
           <td>${formattedDate}</td>
+          <td>${entry.sheet}</td>
           <td>${entry.title}</td>
           <td>${excerpt}</td>
           <td><span class="${entry.unfinished ? "unfinished" : "finished"}">
@@ -273,6 +294,8 @@
       document.getElementById("popupText").innerHTML = highlighted;
 
       popup.style.display = "block";
+
+      document.getElementById("popupSheet").textContent = entry.sheet;
     }
 
     function closePopup() {
