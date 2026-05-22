@@ -193,7 +193,7 @@
         });
     
         // Sort newest first
-        allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+        allEntries.sort((a, b) => parseLocalDate(b.date) - parseLocalDate(a.date));
     
         document.getElementById("loadingMessage").style.display = "none";
     
@@ -235,7 +235,7 @@
       results.forEach(entry => {
         const tr = document.createElement("tr");
 
-        const formattedDate = new Date(entry.date).toLocaleDateString(undefined, {
+        const formattedDate = parseLocalDate(entry.date).toLocaleDateString(undefined, {
           weekday: "short", year: "numeric", month: "short", day: "numeric"
         });
 
@@ -277,7 +277,7 @@
 
     function showPopup(entry) {
       const popup = document.getElementById("popup");
-      const formattedDate = new Date(entry.date).toLocaleDateString(undefined, {
+      const formattedDate = parseLocalDate(entry.date).toLocaleDateString(undefined, {
         weekday: "long", year: "numeric", month: "long", day: "numeric"
       });
 
