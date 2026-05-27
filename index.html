@@ -415,6 +415,18 @@
 
       function autoSelectToday() {
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+      
+        const todayStr = today.toISOString().split("T")[0];
+      
+        document.getElementById("datePicker").value = todayStr;
+      
+        updateWeekday();
+        loadEntry();
+      }
+
+      function autoSelectYesterdayOrToday() {
+        const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
         const yesterday = new Date();
         yesterday.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
