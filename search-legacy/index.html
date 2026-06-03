@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Docs API Quickstart</title>
+    <meta charset="utf-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.glitch.global/130acd19-ddc8-473c-9ab1-09912f41140b/book-512-search.png?v=1644366800274"
+    />
+
+    <script src="./constants.js"></script>
+  </head>
+  <body>
+    <p>Google Docs API Quickstart</p>
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button id="authorize_button" style="display: none">Authorize</button>
+    <button id="signout_button" style="display: none">Sign Out</button>
+    
+    <pre id="content"></pre>
+    <progress id="progressBar" value="0" max="100"></progress>
+
+    <form action="javascript:search()">
+      <input type="text" id="searchInput" placeholder="enter text to search" />
+
+      <input type="submit" id="searchButton" hidden="true" value="Search" />
+    </form>
+
+    <details>
+      <summary>Options</summary>
+      Context size (characters to left/right of search)
+      <input id="contextSize" type="number" value="500" />
+      <br />
+      Use regex?
+      <input id="useRegexCheckbox" type="checkbox" />
+      <br />
+      Show results Oldest to Newest?
+      <input id="resultsOrdering" type="checkbox" />
+      <br />
+      Case Insensitive? (idk how it interacts with regex)
+      <input id="caseInsensitiveCheckbox" type="checkbox" checked="true" />
+      <br />
+      TODO: Earliest date:
+      <input
+        type="date"
+        id="startDate"
+        value="2019-12-26"
+        min="2019-12-26"
+        max="2018-12-31"
+      />
+      Latest date:
+      <input
+        type="date"
+        id="endDate"
+        name="Latest Date"
+        value="2018-07-22"
+        min="2019-12-26"
+        max="2018-12-31"
+      />
+    </details>
+    <div id="results"></div>
+
+    <script type="text/javascript">
+      var entries = {};
+
+      // Array of API discovery doc URLs for APIs used by the quickstart
+      var DISCOVERY_DOCS = [
+        "https://docs.googleapis.com/$discovery/rest?version=v1",
+      ];
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      var SCOPES = "https://www.googleapis.com/auth/documents.readonly";
+
+      var authorizeButton = document.getElementById("authorize_button");
+      var signoutButton = document.getElementById("signout_button");
+
+      /**
+       *  On load, called to load the auth2 library and API client library.
+       */
+      function handleClientLoad() {
+        gapi.load("client:auth2", initClient);
+      }
+
+      /**
+       *  Initializes the API client library and sets up sign-in state
+       *  listeners.
+       */
+      function initClient() {
+        gapi.client
+          .init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: DISCOVERY_DOCS,
+            scope: SCOPES,
+          })
+          .then(function () {
+            // Listen for sign-in state changes.
+            gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+            // Handle the initial sign-in state.
+            updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+            authorizeButton.onclick = handleAuthClick;
+            signoutButton.onclick = handleSignoutClick;
+          });
+      }
+
+      /**
+       *  Called when the signed in status changes, to update the UI
+       *  appropriately. After a sign-in, the API is called.
+       */
+      function updateSigninStatus(isSignedIn) {
+        if (isSignedIn) {
+          authorizeButton.style.display = "none";
+          signoutButton.style.display = "block";
+          printDocTitle();
+        } else {
+          authorizeButton.style.display = "block";
+          signoutButton.style.display = "none";
+        }
+      }
+
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
+
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+
+      /**
+       * Append a pre element to the body containing the given message
+       * as its text node. Used to display the results of the API call.
+       *
+       * @param {string} message Text to be placed in pre element.
+       */
+      function appendPre(message) {
+        var pre = document.getElementById("content");
+        var textContent = document.createTextNode(message + "\n");
+        pre.appendChild(textContent);
+      }
+
+      /**
+       * Prints the title of a sample doc:
+       * https://docs.google.com/document/d/195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE/edit
+       */
+      function printDocTitle() {
+        let counter = 0;
+        LEGACY_DOCUMENT_IDS.forEach((idObject) => {
+          console.log(idObject);
+          const [docName, id] = Object.entries(idObject)[0];
+
+          gapi.client.docs.documents
+            .get({
+              documentId: id,
+            })
+            .then(
+              function (response) {
+                var doc = response.result;
+                var title = doc.title;
+                appendPre('Document "' + title + '" successfully found.\n');
+
+                parseResponseForEntries(response);
+
+                counter += 1;
+                document.getElementById('progressBar').value += 1/LEGACY_DOCUMENT_IDS.length * 100
+                if (counter == LEGACY_DOCUMENT_IDS.length) {
+                  appendPre("All Loaded");
+                  document.getElementById("searchButton").hidden = false;
+
+                  //sort the entries
+                  // const ordered = 
+                  if (document.getElementById('resultsOrdering').checked) {
+                    entries = Object.keys(entries)
+                    .sort()
+                    .reduce((obj, key) => {
+                      obj[key] = entries[key];
+                      return obj;
+                    }, {});
+                  } else {
+                    entries = Object.keys(entries)
+                    .sort()
+                    .reverse()
+                    .reduce((obj, key) => {
+                      obj[key] = entries[key];
+                      return obj;
+                    }, {});
+                  }
+                  
+                  // hide the progress bar
+                  document.getElementById('progressBar').hidden = true
+                  
+                }
+              },
+              function (response) {
+                appendPre("Error: " + response.result.error.message);
+              }
+            );
+        });
+      }
+
+      function parseResponseForEntries(response) {
+        let body = JSON.parse(response.body);
+        let dateRegex =
+          /(\d{4}\-(0?[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01]) \((Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\)( \| ".*?"| <|: )|\d{4}\-(0?[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01]): )/;
+
+        let currEntryString = "";
+        let currDateKey = "";
+        body.body.content.forEach((item) => {
+          let paragraphText = item?.paragraph?.elements?.[0].textRun?.content;
+          const found = paragraphText?.match(dateRegex);
+
+          if (found) {
+            entries[currDateKey] = currEntryString;
+            // extracting date based on whether there's a title or not
+            let date =
+              found[0][found[0].length - 1] == '"'
+                ? found[0]
+                : found[0].substring(0, found[0].length - 2);
+
+            currDateKey = date;
+            currEntryString = "";
+          }
+
+          currEntryString += paragraphText;
+        });
+
+        //straggler -
+        // NOTE: duplicate dated entries won't work, and sometimes unexpected behavior (switching between entries)
+        if (!entries[currDateKey]) {
+          entries[currDateKey] = currEntryString;
+        }
+
+        return;
+      }
+      function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+      }
+
+      function search() {
+        // console.log('hi')
+
+        let contextSize = parseInt(
+          document.getElementById("contextSize").value
+        );
+
+        let len = document.getElementById("searchInput").value.length;
+
+        console.log(document.getElementById("useRegexCheckbox").checked);
+
+        let caseInsensitive = document.getElementById(
+          "caseInsensitiveCheckbox"
+        ).checked;
+        // return
+
+        let searchInput = caseInsensitive
+          ? document.getElementById("searchInput").value.toLowerCase()
+          : document.getElementById("searchInput").value;
+
+        let query = document.getElementById("useRegexCheckbox").checked
+          ? searchInput
+          : escapeRegExp(searchInput);
+
+        let searchQuery = new RegExp(query);
+        document.getElementById("results").innerHTML = "Loading......";
+
+        let finalResultsHTML = "";
+        let counter = 0;
+        // console.log(searchQuery)
+        for (const [date, journalText] of Object.entries(entries)) {
+          let journalTextToSearch = caseInsensitive
+            ? journalText.toLowerCase()
+            : journalText;
+          if (searchQuery.test(journalTextToSearch)) {
+            // console.log(searchQuery, journalTextToSearch)
+
+            let match = searchQuery.exec(journalTextToSearch);
+
+            let left = Math.max(0, match.index - contextSize);
+            let right = Math.min(
+              journalText.length,
+              match.index + len + contextSize
+            );
+
+            // console.log(journalText.substring(match.index, match.index+len))
+            // console.log(contextSize, match.index, len)
+            // console.log(match.index, match.index+len+contextSize)
+
+            finalResultsHTML += `<div><p style="color:red;">${date}</p>- ...${journalText.substring(
+              left,
+              match.index
+            )}<strong>${journalText.substring(
+              match.index,
+              match.index + len
+            )}</strong>${journalText.substring(
+              match.index + len,
+              right
+            )}... </div>`;
+            counter += 1;
+          }
+        }
+
+        finalResultsHTML =
+          counter == 1
+            ? `<i>${counter} result found:</i><br/>` + finalResultsHTML
+            : `<i>${counter} results found:</i><br/>` + finalResultsHTML;
+        document.getElementById("results").innerHTML = finalResultsHTML;
+      }
+    </script>
+    <script
+      async=""
+      defer=""
+      onload="this.onload=function(){};handleClientLoad()"
+      onreadystatechange="if (this.readyState === 'complete') this.onload()"
+      src="https://apis.google.com/js/api.js"
+    ></script>
+  </body>
+</html>
