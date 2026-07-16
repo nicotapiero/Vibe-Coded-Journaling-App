@@ -44,6 +44,20 @@
 
 <h1>Journal Entries Edited Within Last 24 Hours</h1>
 
+<label for="timeRange">Show entries from:</label>
+
+<select id="timeRange" onchange="loadRecentEntries()">
+  <option value="1">Last 1 hour</option>
+  <option value="6">Last 6 hours</option>
+  <option value="12">Last 12 hours</option>
+  <option value="24" selected>Last 24 hours</option>
+  <option value="48">Last 2 days</option>
+  <option value="72">Last 3 days</option>
+  <option value="168">Last 7 days</option>
+  <option value="720">Last 30 days</option>
+  <option value="8760">Last year</option>
+</select>
+
 <button onclick="loadRecentEntries()">Refresh</button>
 
 <table id="recentTable">
@@ -66,7 +80,7 @@ const RANGE = "2026!A:E";
 const CLIENT_ID =
 "400130720536-l3dqr1rnpo1m1n7r2liaman6lptt7nk8.apps.googleusercontent.com";
 
-const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
 
 let gapiInited = false;
 let tokenClient;
@@ -129,7 +143,8 @@ async function loadRecentEntries() {
   const tbody = document.querySelector("#recentTable tbody");
   tbody.innerHTML = "";
 
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const hours = parseInt(document.getElementById("timeRange").value, 10);
+  const cutoff = Date.now() - hours * 60 * 60 * 1000;
 
   let count = 0;
 
@@ -161,7 +176,7 @@ async function loadRecentEntries() {
     }
   });
 
-  alert(`${count} entries edited within the last 24 hours.`);
+  alert(`${count} entries edited within the last ${hours} hour${hours == 1 ? "" : "s"}.`);
 }
 
 window.onload = () => {
