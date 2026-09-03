@@ -65,6 +65,8 @@
       padding: 20px;
       margin: 80px auto;
       max-width: 600px;
+      max-height: 75vh;
+      overflow-y: auto;
       border-radius: 6px;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
@@ -294,12 +296,14 @@
       document.getElementById("popupText").innerHTML = highlighted;
 
       popup.style.display = "block";
+      document.body.style.overflow = "hidden";
 
       document.getElementById("popupSheet").textContent = entry.sheet;
     }
 
     function closePopup() {
       document.getElementById("popup").style.display = "none";
+      document.body.style.overflow = "";
     }
 
     function parseLocalDate(dateString) {
