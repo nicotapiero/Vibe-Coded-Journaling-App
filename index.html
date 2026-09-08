@@ -402,6 +402,14 @@
           callback: (tokenResponse) => {
             accessToken = tokenResponse.access_token;
             gapi.client.setToken(tokenResponse);
+
+            // Hide the save button once the token expires
+            setTimeout(() => {
+              document.getElementById("saveButton").style.display = "none";
+              document.getElementById("autosaveStatus").textContent =
+                "Your session has expired — refresh the page to keep saving.";
+            }, tokenResponse.expires_in * 1000);
+
             loadDates();
           },
         });
