@@ -250,12 +250,51 @@
       });
 
       document.addEventListener("keydown", (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key === "ArrowLeft") {
-          e.preventDefault();
-          navigateDay(-1);
-        } else if (e.ctrlKey && e.shiftKey && e.key === "ArrowRight") {
-          e.preventDefault();
-          navigateDay(1);
+        if (e.ctrlKey || e.metaKey || e.altKey) return; // don't hijack browser shortcuts
+      
+        const tag = document.activeElement?.tagName;
+      
+        // Escape: leave the current field
+        if (e.key === "Escape") {
+          document.activeElement?.blur();
+          return;
+        }
+      
+        // Don't hijack keyboard shortcuts while typing
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+          return;
+        }
+      
+        switch (e.key.toLowerCase()) {
+          case "arrowleft":
+            e.preventDefault();
+            navigateDay(-1);
+            break;
+      
+          case "arrowright":
+            e.preventDefault();
+            navigateDay(1);
+            break;
+      
+          case "t":
+            e.preventDefault();
+            document.getElementById("title").focus();
+            break;
+      
+          case "e":
+            e.preventDefault();
+            document.getElementById("journalEntry").focus();
+            break;
+      
+          case "r":
+            e.preventDefault();
+            document.querySelector('a[href="./read"]').click();
+            break;
+      
+          case "s":
+            e.preventDefault();
+            document.querySelector('a[href="./status"]').click();
+            break;
         }
       });
 
