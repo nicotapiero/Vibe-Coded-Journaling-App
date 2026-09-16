@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sheet Revision History</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px;
+        border: 1px solid #ccc;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Sheet Revision History</h1>
+    <table id="revisionsTable">
+      <thead>
+        <tr>
+          <th>Revision ID</th>
+          <th>Modified</th>
+          <th>Modified By</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      const FILE_ID = "1Lu1wccCd8QsLtJP3jsfQXub4tVNXRrnM8lC588SDbTA";
+      const CLIENT_ID = "1022293236575-rsp9a2vnlnfpfghtvgbe5uejrp5v8h5n.apps.googleusercontent.com";
+      const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+
+      let gapiInited = false;
+      let tokenClient;
+
+      function gapiLoaded() {
+        gapi.load("client", initializeGapiClient);
+      }
+
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            gapi.client.setToken(tokenResponse);
+            loadRevisions();
+          },
+        });
+        maybeEnableButtons();
+      }
+
+      function maybeEnableButtons() {
+        if (gapiInited && tokenClient) {
+          tokenClient.requestAccessToken();
+        }
+      }
+
+      async function loadRevisions() {
+        const tbody = document.querySelector("#revisionsTable tbody");
+        let allRevisions = [];
+        let pageToken = null;
+
+        do {
+          const res = await gapi.client.drive.revisions.list({
+            fileId: FILE_ID,
+            fields: "revisions(id,modifiedTime,lastModifyingUser),nextPageToken",
+            pageSize: 100,
+            pageToken: pageToken || undefined,
+          });
+
+          const result = res.result;
+          if (result.revisions) allRevisions = allRevisions.concat(result.revisions);
+          pageToken = result.nextPageToken || null;
+        } while (pageToken);
+
+        // Most recent first
+        allRevisions.reverse();
+
+        allRevisions.forEach(rev => {
+          const modified = rev.modifiedTime
+            ? new Date(rev.modifiedTime).toLocaleString()
+            : "(unknown)";
+          const user =
+            rev.lastModifyingUser?.displayName ||
+            rev.lastModifyingUser?.emailAddress ||
+            "(unknown)";
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${rev.id}</td>
+            <td>${modified}</td>
+            <td>${user}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        if (allRevisions.length === 0) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="3">No revisions found.</td>`;
+          tbody.appendChild(tr);
+        }
+      }
+
+      window.onload = () => {
+        gapiLoaded();
+        gisLoaded();
+      };
+    </script>
+  </body>
+</html>
