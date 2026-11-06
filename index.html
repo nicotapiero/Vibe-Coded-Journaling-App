@@ -308,7 +308,15 @@
       document.getElementById("journalEntry").addEventListener("input", handleInput);
       document.getElementById("unfinishedCheckbox").addEventListener("change", handleInput);
 
-          function navigateDay(offset) {
+      // Format a Date as YYYY-MM-DD using LOCAL components (no UTC conversion)
+      function formatLocalDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function navigateDay(offset) {
         const datePicker = document.getElementById("datePicker");
         const currentDate = datePicker.value;
         
@@ -323,13 +331,13 @@
         
         // Parse the current date
         const [year, month, day] = currentDate.split("-").map(Number);
-        const date = new Date(year, month - 1, day);
+        const date = new Date(year, month - 1, day, 12); // noon avoids DST edge cases
         
         // Add or subtract days
         date.setDate(date.getDate() + offset);
         
-        // Format back to YYYY-MM-DD
-        const newDateStr = date.toISOString().split("T")[0];
+        // Format back to YYYY-MM-DD (local time)
+        const newDateStr = formatLocalDate(date);
         
         datePicker.value = newDateStr;
         updateWeekday();
@@ -479,7 +487,7 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
       
-        const todayStr = today.toISOString().split("T")[0];
+        const todayStr = formatLocalDate(today);
       
         document.getElementById("datePicker").value = todayStr;
       
@@ -494,8 +502,8 @@
         yesterday.setHours(0, 0, 0, 0); // Set to local midnight to avoid rollover issues
         yesterday.setDate(today.getDate() - 1);
 
-        const todayStr = today.toISOString().split("T")[0];
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
+        const todayStr = formatLocalDate(today);
+        const yesterdayStr = formatLocalDate(yesterday);
 
         const todayEntry = journalData.find((row) => row[0] === todayStr);
         const yesterdayEntry = journalData.find(
