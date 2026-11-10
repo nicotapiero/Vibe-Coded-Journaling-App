@@ -133,9 +133,17 @@
         }
       }
 
+      // Format a Date as YYYY-MM-DD using LOCAL components (no UTC conversion)
+      function formatLocalDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
       function formatDateWithWeekday(date) {
         const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = formatLocalDate(date);
         const weekday = weekdays[date.getDay()];
         return `${dateStr} (${weekday})`;
       }
@@ -179,7 +187,7 @@
             continue;
           }
           
-          const dateStr = date.toISOString().split("T")[0];
+          const dateStr = formatLocalDate(date);
 
           const row = entriesMap.get(dateStr);
 
